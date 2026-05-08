@@ -20,7 +20,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <kinecore.engine.version>1.0.0</kinecore.engine.version>
+        <kinecore.engine.version>1.0.1</kinecore.engine.version>
     </properties>
 
     <dependencies>
