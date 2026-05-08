@@ -242,27 +242,66 @@ public class MonteCarloEnsemble {
         private int iterations = 1000;
         private final Map<String, Function<double[], Double>> outputAggregators = new HashMap<>();
 
-        /** Constructor */
+        /** Constructor for the builder. */
         public Builder() {}
 
-        /** @param model model definition @return this */
+        /** 
+         * Sets the model definition.
+         * @param model model definition 
+         * @return this builder
+         */
         public Builder model(ModelDefinition model) { this.modelDefinition = model; return this; }
-        /** @param sampler parameter sampler @return this */
+        
+        /** 
+         * Sets the parameter sampler.
+         * @param sampler parameter sampler 
+         * @return this builder
+         */
         public Builder sampler(MonteCarloComponents.ParameterSampler sampler) { this.sampler = sampler; return this; }
-        /** @param solver ODE solver @return this */
+        
+        /** 
+         * Sets the ODE solver.
+         * @param solver ODE solver 
+         * @return this builder
+         */
         public Builder solver(ODESolver solver) { this.solver = solver; return this; }
-        /** @param start start time @param end end time @return this */
+        
+        /** 
+         * Sets the simulation time range.
+         * @param start start time 
+         * @param end end time 
+         * @return this builder
+         */
         public Builder timeRange(double start, double end) { this.startTime = start; this.endTime = end; return this; }
-        /** @param step step size @return this */
+        
+        /** 
+         * Sets the output recording step size.
+         * @param step step size 
+         * @return this builder
+         */
         public Builder stepSize(double step) { this.stepSize = step; return this; }
-        /** @param iters number of iterations @return this */
+        
+        /** 
+         * Sets the number of iterations.
+         * @param iters number of iterations 
+         * @return this builder
+         */
         public Builder iterations(int iters) { this.iterations = iters; return this; }
-        /** @param name name of output @param agg aggregator function @return this */
+        
+        /** 
+         * Adds an output variable to track.
+         * @param name name of output 
+         * @param agg aggregator function 
+         * @return this builder
+         */
         public Builder addOutput(String name, Function<double[], Double> agg) {
             this.outputAggregators.put(name, agg); return this;
         }
 
-        /** @return the built ensemble */
+        /** 
+         * Finalizes and builds the ensemble.
+         * @return the built ensemble 
+         */
         public MonteCarloEnsemble build() {
             if (modelDefinition == null || sampler == null) throw new IllegalStateException("Model and sampler must be set.");
             if (outputAggregators.isEmpty()) outputAggregators.put("Total_Mass", state -> Arrays.stream(state).sum());

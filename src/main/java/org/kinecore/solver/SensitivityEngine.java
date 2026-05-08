@@ -11,6 +11,11 @@ import java.util.*;
 public class SensitivityEngine {
 
     /**
+     * Private constructor for utility class.
+     */
+    private SensitivityEngine() {}
+
+    /**
      * Analyzes the sensitivity of a target output variable to all sampled parameters.
      * 
      * @param result the simulation result containing iteration-level data

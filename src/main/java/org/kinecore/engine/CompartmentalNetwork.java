@@ -122,7 +122,10 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
         }
     }
 
-    /** @return the list of compartments in this network */
+    /** 
+     * Gets the list of compartments.
+     * @return the list of compartments in this network 
+     */
     public List<Compartment> getCompartments() {
         return compartments;
     }
