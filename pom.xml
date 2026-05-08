@@ -58,6 +58,7 @@
         <commons-math.version>3.6.1</commons-math.version>
         <tdigest.version>3.3</tdigest.version>
         <jackson.version>2.17.0</jackson.version>
+        <gpg.skip>true</gpg.skip> <!-- Default to skip GPG signing -->
     </properties>
 
     <dependencies>
@@ -123,7 +124,7 @@
                 </executions>
             </plugin>
 
-            <!-- GPG Signing (for Maven Central) -->
+            <!-- GPG Signing (wrapped in skip-logic) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
@@ -135,6 +136,9 @@
                         <goals><goal>sign</goal></goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <skip>${gpg.skip}</skip>
+                </configuration>
             </plugin>
 
             <!-- Central Publishing Plugin -->
@@ -150,4 +154,13 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <properties>
+                <gpg.skip>false</gpg.skip>
+            </properties>
+        </profile>
+    </profiles>
 </project>
