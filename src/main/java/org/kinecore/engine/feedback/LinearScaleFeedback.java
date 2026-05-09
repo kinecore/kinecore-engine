@@ -33,7 +33,10 @@ public class LinearScaleFeedback implements FeedbackOperator {
         this.scalar = scalar;
     }
 
-    /** @return the scalar multiplier */
+    /**
+     * Gets the scalar multiplier applied to the incoming flow rate.
+     * @return the scalar multiplier
+     */
     public double getScalar() { return scalar; }
 
     @Override

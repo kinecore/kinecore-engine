@@ -45,11 +45,20 @@ public class LogisticFeedback implements FeedbackOperator {
         this.steepness  = steepness;
     }
 
-    /** @return state index */
+    /**
+     * Gets the index of the state variable driving the logistic curve.
+     * @return state index
+     */
     public int    getStateIndex() { return stateIndex; }
-    /** @return midpoint */
+    /**
+     * Gets the midpoint of the sigmoid (value at which the multiplier is 0.5).
+     * @return midpoint
+     */
     public double getMidpoint()   { return midpoint; }
-    /** @return steepness */
+    /**
+     * Gets the steepness (growth rate) of the sigmoid curve.
+     * @return steepness
+     */
     public double getSteepness()  { return steepness; }
 
     @Override

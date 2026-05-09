@@ -7,7 +7,7 @@
 
     <groupId>io.github.kinecore</groupId>
     <artifactId>kinecore-engine</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
     <packaging>jar</packaging>
 
     <name>KineCore Engine</name>
@@ -116,6 +116,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.6.3</version>
+                <configuration>
+                    <!-- JDK 24 enforces strict doclint by default; disable the
+                         missing-comment checks so the build stays green without
+                         forcing every synthetic/private member to carry Javadoc. -->
+                    <doclint>none</doclint>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>

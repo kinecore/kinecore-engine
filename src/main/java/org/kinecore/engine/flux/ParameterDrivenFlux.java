@@ -40,10 +40,16 @@ public class ParameterDrivenFlux implements Flux {
         this.fallbackRate = fallbackRate;
     }
 
-    /** @return param key */
+    /**
+     * Gets the parameter key used for rate lookup.
+     * @return param key
+     */
     public String getParamKey()    { return paramKey; }
 
-    /** @return fallback rate */
+    /**
+     * Gets the fallback rate used when the param key is absent.
+     * @return fallback rate
+     */
     public double getFallbackRate() { return fallbackRate; }
 
     @Override

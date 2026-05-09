@@ -42,10 +42,16 @@ public class MassActionFlux implements Flux {
         this.interactorIndex  = interactorIndex;
     }
 
-    /** @return rate constant */
+    /**
+     * Gets the reaction rate constant.
+     * @return rate constant
+     */
     public double getRate()           { return rate; }
 
-    /** @return interactor compartment index */
+    /**
+     * Gets the index of the interacting compartment in the state vector.
+     * @return interactor compartment index, or -1 for first-order kinetics
+     */
     public int getInteractorIndex()   { return interactorIndex; }
 
     @Override
