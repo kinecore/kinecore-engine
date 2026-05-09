@@ -231,8 +231,9 @@ public class MonteCarloEnsemble {
                 
                 // Native KineCore Advection processing (Upgrade 1)
                 for (CompartmentalNetwork.AdvectionChain chain : network.getAdvectionChains()) {
-                    double rem = tEnd % chain.shiftFrequency;
-                    if (rem < 1e-9 || (chain.shiftFrequency - rem) < 1e-9) {
+                    long prevTick = (long) Math.floor(tStart / chain.shiftFrequency + 1e-9);
+                    long currTick = (long) Math.floor(tEnd / chain.shiftFrequency + 1e-9);
+                    if (currTick > prevTick) {
                         int[] idx = chain.indices;
                         if (chain.accumulateTerminal) {
                             y[idx[idx.length - 1]] += y[idx[idx.length - 2]];

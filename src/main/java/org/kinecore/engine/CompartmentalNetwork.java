@@ -111,6 +111,18 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
                 flow = fb.apply(t, flow, y, params);
             }
             if (flow < 0.0) flow = 0.0;
+
+            Compartment source = compartments.get(f.fromIdx);
+            if (clampAtZero && y[f.fromIdx] <= 1e-12) {
+                flow = 0.0;
+            } else if (y[f.fromIdx] <= source.getMin() + 1e-12) {
+                flow = 0.0;
+            }
+            Compartment target = compartments.get(f.toIdx);
+            if (y[f.toIdx] >= target.getMax() - 1e-12) {
+                flow = 0.0;
+            }
+
             yDot[f.fromIdx] -= flow;
             yDot[f.toIdx]   += flow;
         }
@@ -124,6 +136,16 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
             for (FeedbackOperator fb : globalFeedbacks) {
                 net = fb.apply(t, net, y, params);
             }
+
+            Compartment c = compartments.get(ss.idx);
+            if (net < 0 && clampAtZero && y[ss.idx] <= 1e-12) {
+                net = 0.0;
+            } else if (net < 0 && y[ss.idx] <= c.getMin() + 1e-12) {
+                net = 0.0;
+            } else if (net > 0 && y[ss.idx] >= c.getMax() - 1e-12) {
+                net = 0.0;
+            }
+
             yDot[ss.idx] += net;
         }
 
@@ -131,16 +153,6 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
         for (int i = 0; i < yDot.length; i++) {
             Compartment c = compartments.get(i);
             if (c.isDerivativeLocked()) {
-                yDot[i] = 0.0;
-                continue;
-            }
-            if (clampAtZero && y[i] <= 1e-12 && yDot[i] < 0) {
-                yDot[i] = 0.0;
-            }
-            if (y[i] <= c.getMin() + 1e-12 && yDot[i] < 0) {
-                yDot[i] = 0.0;
-            }
-            if (y[i] >= c.getMax() - 1e-12 && yDot[i] > 0) {
                 yDot[i] = 0.0;
             }
         }
