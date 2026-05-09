@@ -23,11 +23,11 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
     private final Map<String, Double> params;
     private final boolean clampAtZero;
 
-    static class AdvectionChain {
-        final int[] indices;
-        boolean accumulateTerminal;
-        double shiftFrequency;
-        AdvectionChain(int[] indices, boolean acc, double freq) {
+    public static class AdvectionChain {
+        public final int[] indices;
+        public boolean accumulateTerminal;
+        public double shiftFrequency;
+        public AdvectionChain(int[] indices, boolean acc, double freq) {
             this.indices = indices;
             this.accumulateTerminal = acc;
             this.shiftFrequency = freq;
