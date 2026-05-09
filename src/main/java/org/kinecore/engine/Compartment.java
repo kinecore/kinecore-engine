@@ -11,6 +11,10 @@ public class Compartment {
     private final String name;
     private final int index;
     private final Function<Map<String, Double>, Double> initialValueSupplier;
+    
+    private double min = Double.NEGATIVE_INFINITY;
+    private double max = Double.POSITIVE_INFINITY;
+    private boolean derivativeLocked = false;
 
     /**
      * Constructs a compartment with a fixed initial value.
@@ -58,4 +62,13 @@ public class Compartment {
     public double getInitialValue(Map<String, Double> params) {
         return initialValueSupplier.apply(params);
     }
+
+    public double getMin() { return min; }
+    public Compartment withMin(double min) { this.min = min; return this; }
+
+    public double getMax() { return max; }
+    public Compartment withMax(double max) { this.max = max; return this; }
+
+    public boolean isDerivativeLocked() { return derivativeLocked; }
+    public Compartment lockDerivative(boolean locked) { this.derivativeLocked = locked; return this; }
 }

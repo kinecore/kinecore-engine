@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -28,6 +29,7 @@ public class MonteCarloEnsemble {
     private final double stepSize;
     private final int iterations;
     private final Map<String, Function<double[], Double>> outputAggregators;
+    private final Consumer<double[]> discreteShiftHandler;
 
     /**
      * Immutable result of an ensemble run.
@@ -141,6 +143,7 @@ public class MonteCarloEnsemble {
         this.stepSize          = b.stepSize;
         this.iterations        = b.iterations;
         this.outputAggregators = Collections.unmodifiableMap(new HashMap<>(b.outputAggregators));
+        this.discreteShiftHandler = b.discreteShiftHandler;
     }
 
     /**
@@ -203,30 +206,81 @@ public class MonteCarloEnsemble {
         
         double[] y = network.buildInitialState();
 
-        StepHandler handler = new StepHandler() {
-            double nextT = startTime;
-            int idx = 0;
-            @Override public void init(double t0, double[] y0, double t) {}
-            @Override public void handleStep(StepInterpolator interp, boolean isLast) {
-                double stepEnd = interp.getCurrentTime();
-                while (nextT <= stepEnd + 1e-12 && idx < nSteps) {
-                    // Fix for Apache Commons Math 3.x StepInterpolator
-                    interp.setInterpolatedTime(nextT);
-                    double[] state = interp.getInterpolatedState();
-                    
-                    for (var e : outputAggregators.entrySet()) {
-                        results.get(e.getKey())[idx] = e.getValue().apply(state);
+        boolean hasDiscreteLogic = discreteShiftHandler != null || !network.getAdvectionChains().isEmpty();
+
+        if (hasDiscreteLogic) {
+            // Record initial state
+            for (var e : outputAggregators.entrySet()) {
+                results.get(e.getKey())[0] = e.getValue().apply(y);
+            }
+            
+            for (int step = 1; step < nSteps; step++) {
+                double tStart = startTime + (step - 1) * stepSize;
+                double tEnd = startTime + step * stepSize;
+                
+                try {
+                    solver.integrate(network, tStart, tEnd, y, null);
+                } catch (Exception e) {
+                    // handle error
+                }
+                
+                // Legacy support for user-defined handlers
+                if (discreteShiftHandler != null) {
+                    discreteShiftHandler.accept(y);
+                }
+                
+                // Native KineCore Advection processing (Upgrade 1)
+                for (CompartmentalNetwork.AdvectionChain chain : network.getAdvectionChains()) {
+                    double rem = tEnd % chain.shiftFrequency;
+                    if (rem < 1e-9 || (chain.shiftFrequency - rem) < 1e-9) {
+                        int[] idx = chain.indices;
+                        if (chain.accumulateTerminal) {
+                            y[idx[idx.length - 1]] += y[idx[idx.length - 2]];
+                        }
+                        for (int i = idx.length - 1; i > 0; i--) {
+                            y[idx[i]] = y[idx[i - 1]];
+                        }
+                        y[idx[0]] = 0.0;
                     }
-                    nextT += stepSize;
-                    idx++;
+                }
+                
+                for (var e : outputAggregators.entrySet()) {
+                    results.get(e.getKey())[step] = e.getValue().apply(y);
                 }
             }
-        };
+        } else {
+            StepHandler handler = new StepHandler() {
+                double nextT = startTime;
+                int idx = 0;
+                @Override public void init(double t0, double[] y0, double t) {
+                    if (idx == 0 && nextT == startTime) {
+                        for (var e : outputAggregators.entrySet()) {
+                            results.get(e.getKey())[idx] = e.getValue().apply(y0);
+                        }
+                        nextT += stepSize;
+                        idx++;
+                    }
+                }
+                @Override public void handleStep(StepInterpolator interp, boolean isLast) {
+                    double stepEnd = interp.getCurrentTime();
+                    while (nextT <= stepEnd + 1e-12 && idx < nSteps) {
+                        interp.setInterpolatedTime(nextT);
+                        double[] state = interp.getInterpolatedState();
+                        
+                        for (var e : outputAggregators.entrySet()) {
+                            results.get(e.getKey())[idx] = e.getValue().apply(state);
+                        }
+                        nextT += stepSize;
+                        idx++;
+                    }
+                }
+            };
 
-        try {
-            solver.integrate(network, startTime, endTime, y, handler);
-        } catch (Exception e) {
-            // handle error
+            try {
+                solver.integrate(network, startTime, endTime, y, handler);
+            } catch (Exception e) {
+                // handle error
+            }
         }
         return results;
     }
@@ -241,6 +295,7 @@ public class MonteCarloEnsemble {
         private double startTime = 0, endTime = 100, stepSize = 1;
         private int iterations = 1000;
         private final Map<String, Function<double[], Double>> outputAggregators = new HashMap<>();
+        private Consumer<double[]> discreteShiftHandler = null;
 
         /** Constructor for the builder. */
         public Builder() {}
@@ -296,6 +351,15 @@ public class MonteCarloEnsemble {
          */
         public Builder addOutput(String name, Function<double[], Double> agg) {
             this.outputAggregators.put(name, agg); return this;
+        }
+
+        /** 
+         * Sets a discrete shift handler to run at each step interval.
+         * @param handler discrete shift handler
+         * @return this builder
+         */
+        public Builder discreteShift(Consumer<double[]> handler) {
+            this.discreteShiftHandler = handler; return this;
         }
 
         /** 

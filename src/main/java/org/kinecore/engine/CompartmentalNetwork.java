@@ -18,8 +18,21 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
     private final List<IndexedFlux> fluxes;
     private final List<IndexedSourceSink> sources;
     private final List<FeedbackOperator> globalFeedbacks;
+    private final List<AdvectionChain> advectionChains;
+    private final Map<String, ExogenousSignal> exogenousSignals;
     private final Map<String, Double> params;
     private final boolean clampAtZero;
+
+    static class AdvectionChain {
+        final int[] indices;
+        boolean accumulateTerminal;
+        double shiftFrequency;
+        AdvectionChain(int[] indices, boolean acc, double freq) {
+            this.indices = indices;
+            this.accumulateTerminal = acc;
+            this.shiftFrequency = freq;
+        }
+    }
 
     static class IndexedFlux {
         final int fromIdx;
@@ -51,12 +64,16 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
                          List<IndexedFlux>      fluxes,
                          List<IndexedSourceSink> sources,
                          List<FeedbackOperator> globalFeedbacks,
+                         List<AdvectionChain>   advectionChains,
+                         Map<String, ExogenousSignal> exogenousSignals,
                          Map<String, Double>    params,
                          boolean                clampAtZero) {
         this.compartments = Collections.unmodifiableList(compartments);
         this.fluxes       = Collections.unmodifiableList(fluxes);
         this.sources      = Collections.unmodifiableList(sources);
         this.globalFeedbacks = globalFeedbacks != null ? Collections.unmodifiableList(globalFeedbacks) : Collections.emptyList();
+        this.advectionChains = advectionChains != null ? Collections.unmodifiableList(advectionChains) : Collections.emptyList();
+        this.exogenousSignals = exogenousSignals != null ? Collections.unmodifiableMap(exogenousSignals) : Collections.emptyMap();
         this.params       = params != null ? Collections.unmodifiableMap(params) : Collections.emptyMap();
         this.clampAtZero  = clampAtZero;
     }
@@ -69,7 +86,7 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
      * @return a new bound network
      */
     public CompartmentalNetwork withParams(Map<String, Double> newParams) {
-        return new CompartmentalNetwork(compartments, fluxes, sources, globalFeedbacks, newParams, clampAtZero);
+        return new CompartmentalNetwork(compartments, fluxes, sources, globalFeedbacks, advectionChains, exogenousSignals, newParams, clampAtZero);
     }
 
     @Override
@@ -110,16 +127,31 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
             yDot[ss.idx] += net;
         }
 
-        // 4. Constraint Handling: Physical non-negativity (Gap 1)
-        if (clampAtZero) {
-            for (int i = 0; i < yDot.length; i++) {
-                // If the compartment is empty (or negative) and the rate of change is negative,
-                // we force it to zero to prevent further decay into negative territory.
-                if (y[i] <= 1e-12 && yDot[i] < 0) {
-                    yDot[i] = 0;
-                }
+        // 4. Constraint Handling: Physical non-negativity and bounds
+        for (int i = 0; i < yDot.length; i++) {
+            Compartment c = compartments.get(i);
+            if (c.isDerivativeLocked()) {
+                yDot[i] = 0.0;
+                continue;
+            }
+            if (clampAtZero && y[i] <= 1e-12 && yDot[i] < 0) {
+                yDot[i] = 0.0;
+            }
+            if (y[i] <= c.getMin() + 1e-12 && yDot[i] < 0) {
+                yDot[i] = 0.0;
+            }
+            if (y[i] >= c.getMax() - 1e-12 && yDot[i] > 0) {
+                yDot[i] = 0.0;
             }
         }
+    }
+
+    public List<AdvectionChain> getAdvectionChains() {
+        return advectionChains;
+    }
+    
+    public Map<String, ExogenousSignal> getExogenousSignals() {
+        return exogenousSignals;
     }
 
     /** 

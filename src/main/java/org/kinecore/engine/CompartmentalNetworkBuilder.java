@@ -13,12 +13,22 @@ import java.util.stream.IntStream;
 public class CompartmentalNetworkBuilder {
 
     private final List<Compartment>                       compartments = new ArrayList<>();
+    private final List<Compartment>                       lastAddedCompartments = new ArrayList<>();
     private final List<CompartmentalNetwork.IndexedFlux>      fluxes   = new ArrayList<>();
     private final List<CompartmentalNetwork.IndexedSourceSink> sources  = new ArrayList<>();
     private final List<FeedbackOperator>                  globalFeedbacks = new ArrayList<>();
     private final Map<String, FeedbackOperator>           namedFeedbacks  = new HashMap<>();
     private final Map<String, int[]>                      aggregates      = new HashMap<>();
+    private final Map<String, ExogenousSignal>            exogenousSignals = new HashMap<>();
+    private final List<CompartmentalNetwork.AdvectionChain> advectionChains = new ArrayList<>();
     private boolean                                       clampAtZero     = false;
+
+    public class AdvectionChainConfigurator {
+        private final CompartmentalNetwork.AdvectionChain chain;
+        AdvectionChainConfigurator(CompartmentalNetwork.AdvectionChain chain) { this.chain = chain; }
+        public AdvectionChainConfigurator accumulateTerminal(boolean acc) { chain.accumulateTerminal = acc; return this; }
+        public AdvectionChainConfigurator shiftFrequency(double freq) { chain.shiftFrequency = freq; return this; }
+    }
 
     public CompartmentalNetworkBuilder() {}
 
@@ -31,20 +41,47 @@ public class CompartmentalNetworkBuilder {
      * @return this builder
      */
     public CompartmentalNetworkBuilder addCompartmentSeries(String prefix, int start, int end, Function<Integer, Double> initialValueMapper) {
+        lastAddedCompartments.clear();
         for (int i = start; i <= end; i++) {
-            addCompartment(prefix + "_" + i, initialValueMapper.apply(i));
+            Compartment c = new Compartment(prefix + "_" + i, compartments.size(), initialValueMapper.apply(i));
+            compartments.add(c);
+            lastAddedCompartments.add(c);
         }
         return this;
     }
 
-    /**
-     * Adds a single compartment with a static initial value.
-     * @param name unique name
-     * @param initialValue starting value
-     * @return this builder
-     */
     public CompartmentalNetworkBuilder addCompartment(String name, double initialValue) {
-        compartments.add(new Compartment(name, compartments.size(), initialValue));
+        lastAddedCompartments.clear();
+        Compartment c = new Compartment(name, compartments.size(), initialValue);
+        compartments.add(c);
+        lastAddedCompartments.add(c);
+        return this;
+    }
+
+    public CompartmentalNetworkBuilder withMin(double min) {
+        for (Compartment c : lastAddedCompartments) c.withMin(min);
+        return this;
+    }
+
+    public CompartmentalNetworkBuilder withMax(double max) {
+        for (Compartment c : lastAddedCompartments) c.withMax(max);
+        return this;
+    }
+
+    public CompartmentalNetworkBuilder lockDerivative(boolean locked) {
+        for (Compartment c : lastAddedCompartments) c.lockDerivative(locked);
+        return this;
+    }
+
+    public AdvectionChainConfigurator addAdvectionChain(String prefix, int start, int end) {
+        int[] indices = IntStream.rangeClosed(start, end).map(i -> requireCompartmentIndex(prefix + "_" + i)).toArray();
+        CompartmentalNetwork.AdvectionChain chain = new CompartmentalNetwork.AdvectionChain(indices, false, 1.0);
+        advectionChains.add(chain);
+        return new AdvectionChainConfigurator(chain);
+    }
+
+    public CompartmentalNetworkBuilder addExogenousVariable(String name, ExogenousSignal signal) {
+        exogenousSignals.put(name, signal);
         return this;
     }
 
@@ -206,6 +243,8 @@ public class CompartmentalNetworkBuilder {
         List<CompartmentalNetwork.IndexedFlux> fluxesSnapshot = new ArrayList<>(fluxes);
         List<CompartmentalNetwork.IndexedSourceSink> sourcesSnapshot = new ArrayList<>(sources);
         List<FeedbackOperator> globalsSnapshot = new ArrayList<>(globalFeedbacks);
+        List<CompartmentalNetwork.AdvectionChain> chainsSnapshot = new ArrayList<>(advectionChains);
+        Map<String, ExogenousSignal> signalsSnapshot = new HashMap<>(exogenousSignals);
         boolean clamp = this.clampAtZero;
 
         return params -> new CompartmentalNetwork(
@@ -213,6 +252,8 @@ public class CompartmentalNetworkBuilder {
                 fluxesSnapshot,
                 sourcesSnapshot,
                 globalsSnapshot,
+                chainsSnapshot,
+                signalsSnapshot,
                 params,
                 clamp
         );
