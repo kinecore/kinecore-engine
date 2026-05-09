@@ -1,0 +1,4066 @@
+/* {"preprocessed": true} */
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\.gitignore ---
+target/
+.vscode/
+.idea/
+*.iml
+*.class
+.DS_Store
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\pom.xml ---
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.kinecore</groupId>
+    <artifactId>kinecore-engine</artifactId>
+    <version>1.1.1</version>
+    <packaging>jar</packaging>
+
+    <name>KineCore Engine</name>
+    <description>
+        Generic, high-performance system dynamics engine for compartmental ODE modelling.
+    </description>
+    <url>https://github.com/kinecore/kinecore-engine</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Jishnu B R</name>
+            <email>jishnubr2014@gmail.com</email>
+            <organization>KineCore</organization>
+            <organizationUrl>https://github.com/kinecore</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/kinecore/kinecore-engine.git</connection>
+        <developerConnection>scm:git:ssh://github.com/kinecore/kinecore-engine.git</developerConnection>
+        <url>https://github.com/kinecore/kinecore-engine</url>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>central</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>central</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <commons-math.version>3.6.1</commons-math.version>
+        <tdigest.version>3.3</tdigest.version>
+        <jackson.version>2.17.0</jackson.version>
+        <gpg.skip>true</gpg.skip> <!-- Default to skip GPG signing -->
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>${commons-math.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.tdunning</groupId>
+            <artifactId>t-digest</artifactId>
+            <version>${tdigest.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Compiler plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>21</release>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+
+            <!-- Source JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals><goal>jar-no-fork</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Javadoc JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <!-- JDK 24 enforces strict doclint by default; disable the
+                         missing-comment checks so the build stays green without
+                         forcing every synthetic/private member to carry Javadoc. -->
+                    <doclint>none</doclint>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals><goal>jar</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GPG Signing (wrapped in skip-logic) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals><goal>sign</goal></goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skip>${gpg.skip}</skip>
+                </configuration>
+            </plugin>
+
+            <!-- Central Publishing Plugin -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.4.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <properties>
+                <gpg.skip>false</gpg.skip>
+            </properties>
+        </profile>
+    </profiles>
+</project>
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\README.md ---
+# KineCore Engine
+
+A universal, high-performance system dynamics engine for Java.
+
+## Features
+- **Generic Compartmental Modeling**: Build demographic, epidemiological, or climate models using a unified API.
+- **Fluent Builder DSL**: Declaratively define compartments, fluxes, and sources.
+- **Non-Linear Feedback**: Implement complex tipping points and localized feedback loops.
+- **Monte Carlo Ensembles**: Parallel stochastic simulations with streaming quantile aggregation (T-Digest).
+- **Sensitivity Analysis**: Pearson Correlation engine to identify key system drivers.
+- **Numerical Safety**: Built-in non-negativity constraints for physical systems.
+- **Pluggable Solvers**: Support for adaptive solvers like Dormand-Prince and Gragg-Bulirsch-Stoer.
+
+## Quick Start (SIR Model)
+
+```java
+ModelDefinition sir = new CompartmentalNetworkBuilder()
+    .addCompartment("S", 999_000)
+    .addCompartment("I", 1_000)
+    .addCompartment("R", 0)
+    .addFlux("S", "I", (t, s, state, params) -> 0.35 * s * state[1] / 1e6)
+    .addConstantRateFlux("I", "R", 0.1)
+    .clampAtZero(true)
+    .buildDefinition();
+
+MonteCarloEnsemble ensemble = new MonteCarloEnsemble.Builder()
+    .model(sir)
+    .sampler(seed -> Map.of("beta", 0.35))
+    .timeRange(0, 150)
+    .iterations(1000)
+    .addOutput("Infected", state -> state[1])
+    .build();
+
+SimulationResult result = ensemble.run();
+result.toCSV("sir_output.csv");
+```
+
+## Installation
+Add the following to your `pom.xml`:
+```xml
+<dependency>
+    <groupId>io.github.kinecore</groupId>
+    <artifactId>kinecore-engine</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\.gitignore ---
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\AGENTS.md ---
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\CLAUDE.md ---
+@AGENTS.md
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\eslint.config.mjs ---
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\next-env.d.ts ---
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+import "./.next/dev/types/routes.d.ts";
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\next.config.ts ---
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\package.json ---
+{
+  "name": "kinecore-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "axios": "^1.16.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.14.0",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\postcss.config.mjs ---
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\README.md ---
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\tsconfig.json ---
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\public\file.svg ---
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\public\globe.svg ---
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\public\next.svg ---
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\public\vercel.svg ---
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\public\window.svg ---
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\src\app\globals.css ---
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(240 10% 3.9%);
+  --color-foreground: hsl(0 0% 98%);
+  --color-card: hsl(240 10% 3.9%);
+  --color-card-foreground: hsl(0 0% 98%);
+  --color-popover: hsl(240 10% 3.9%);
+  --color-popover-foreground: hsl(0 0% 98%);
+  --color-primary: hsl(263.4 70% 50.4%);
+  --color-primary-foreground: hsl(210 40% 98%);
+  --color-secondary: hsl(240 3.7% 15.9%);
+  --color-secondary-foreground: hsl(0 0% 98%);
+  --color-muted: hsl(240 3.7% 15.9%);
+  --color-muted-foreground: hsl(240 5% 64.9%);
+  --color-accent: hsl(240 3.7% 15.9%);
+  --color-accent-foreground: hsl(0 0% 98%);
+  --color-destructive: hsl(0 62.8% 30.6%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-border: hsl(240 3.7% 15.9%);
+  --color-input: hsl(240 3.7% 15.9%);
+  --color-ring: hsl(240 4.9% 83.9%);
+}
+
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-border, currentColor);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+.glass-card {
+  background-color: color-mix(in srgb, var(--color-card) 50%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, white 10%, transparent);
+}
+
+.gradient-text {
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, #818cf8, #9333ea);
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\src\app\page.tsx ---
+"use client";
+
+import React from 'react';
+import { 
+  Plus, 
+  Play, 
+  Clock, 
+  CheckCircle2, 
+  AlertCircle,
+  TrendingUp,
+  Users,
+  Target,
+  Activity
+} from 'lucide-react';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+
+const dummyData = [
+  { time: 0, p5: 100, p50: 100, p95: 100 },
+  { time: 20, p5: 90, p50: 110, p95: 130 },
+  { time: 40, p5: 85, p50: 125, p95: 170 },
+  { time: 60, p5: 70, p50: 150, p95: 240 },
+  { time: 80, p5: 60, p50: 180, p95: 350 },
+  { time: 100, p5: 50, p50: 220, p95: 500 },
+];
+
+export default function DashboardOverview() {
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex justify-between items-end">
+        <div>
+          <h2 className="text-3xl font-bold text-white tracking-tight">System Overview</h2>
+          <p className="text-zinc-500 mt-1">Monitor real-time simulation convergence and model performance.</p>
+        </div>
+        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
+          <Plus className="w-5 h-5" />
+          Create New Model
+        </button>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: 'Active Jobs', value: '3', icon: Activity, color: 'text-indigo-400' },
+          { label: 'Total Models', value: '12', icon: Target, color: 'text-purple-400' },
+          { label: 'Success Rate', value: '98.2%', icon: TrendingUp, color: 'text-emerald-400' },
+        ].map((stat) => (
+          <div key={stat.label} className="glass-card p-6 rounded-2xl">
+            <div className="flex justify-between items-start">
+              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <span className="text-2xl font-bold text-white">{stat.value}</span>
+            </div>
+            <p className="text-sm font-medium text-zinc-500 mt-2">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Simulation Chart */}
+        <div className="lg:col-span-2 glass-card rounded-2xl p-6">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-lg font-semibold text-white">Live Projection Convergence</h3>
+            <div className="flex gap-4 text-xs font-medium">
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500/20 border border-indigo-500" />
+                95% Confidence
+              </div>
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                Median (p50)
+              </div>
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dummyData}>
+                <defs>
+                  <linearGradient id="colorP50" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#71717a" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false}
+                />
+                <YAxis 
+                  stroke="#71717a" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}`}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="p95" 
+                  stroke="none" 
+                  fill="#6366f1" 
+                  fillOpacity={0.05} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="p5" 
+                  stroke="none" 
+                  fill="#6366f1" 
+                  fillOpacity={0.1} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="p50" 
+                  stroke="#6366f1" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorP50)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Recent Jobs */}
+        <div className="glass-card rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-white mb-6">Recent Deployments</h3>
+          <div className="space-y-4">
+            {[
+              { id: 'df0d1e1c', name: 'Kerala-2026-v2', status: 'completed', time: '2 mins ago' },
+              { id: 'ab339c5c', name: 'SIR-Standard-Model', status: 'running', time: '5 mins ago' },
+              { id: 'xe967-75', name: 'Climate-Feedback-Loop', status: 'failed', time: '12 mins ago' },
+              { id: 'db339c5c', name: 'Socio-Economic-Stress', status: 'completed', time: '1 hr ago' },
+            ].map((job) => (
+              <div key={job.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    job.status === 'completed' ? 'bg-emerald-500/10' :
+                    job.status === 'running' ? 'bg-indigo-500/10' : 'bg-red-500/10'
+                  }`}>
+                    {job.status === 'completed' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                    {job.status === 'running' && <Play className="w-4 h-4 text-indigo-500 animate-pulse fill-indigo-500" />}
+                    {job.status === 'failed' && <AlertCircle className="w-4 h-4 text-red-500" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-200">{job.name}</p>
+                    <p className="text-xs text-zinc-500">{job.time}</p>
+                  </div>
+                </div>
+                <div className="text-[10px] font-mono text-zinc-600 group-hover:text-zinc-400">
+                  #{job.id}
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="w-full mt-6 py-2.5 rounded-xl border border-white/5 text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-all">
+            View All Jobs
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\src\components\Sidebar.tsx ---
+"use client";
+
+import React from 'react';
+import { 
+  Activity, 
+  BarChart3, 
+  Database, 
+  LayoutDashboard, 
+  Settings, 
+  Zap 
+} from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function Sidebar() {
+  const menuItems = [
+    { icon: LayoutDashboard, label: 'Overview', active: true },
+    { icon: Database, label: 'Models', active: false },
+    { icon: Activity, label: 'Simulations', active: false },
+    { icon: BarChart3, label: 'Analytics', active: false },
+    { icon: Settings, label: 'Settings', active: false },
+  ];
+
+  return (
+    <aside className="w-64 border-r border-white/5 bg-[#05050a] flex flex-col h-screen sticky top-0">
+      <div className="p-6 flex items-center gap-3">
+        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <Zap className="text-white w-5 h-5 fill-white" />
+        </div>
+        <h1 className="text-xl font-bold tracking-tight text-white">KineCore</h1>
+      </div>
+
+      <nav className="flex-1 px-4 py-4 space-y-2">
+        {menuItems.map((item) => (
+          <button
+            key={item.label}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 group",
+              item.active 
+                ? "bg-white/5 text-white" 
+                : "text-zinc-500 hover:text-white hover:bg-white/5"
+            )}
+          >
+            <item.icon className={cn(
+              "w-5 h-5",
+              item.active ? "text-indigo-500" : "group-hover:text-indigo-400"
+            )} />
+            <span className="font-medium text-sm">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="p-6 border-t border-white/5">
+        <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-4">
+          <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">Status</p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-sm text-zinc-300">Engine Connected</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\pom.xml ---
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.kinecore</groupId>
+    <artifactId>kinecore-server</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>KineCore Server</name>
+    <description>Enterprise Simulation Hub for the KineCore Engine</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <kinecore.engine.version>1.0.1</kinecore.engine.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spring Boot Starters -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- KineCore Engine -->
+        <dependency>
+            <groupId>io.github.kinecore</groupId>
+            <artifactId>kinecore-engine</artifactId>
+            <version>${kinecore.engine.version}</version>
+        </dependency>
+
+        <!-- Database -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Swagger -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\src\main\java\org\kinecore\server\KineCoreServerApplication.java ---
+package org.kinecore.server;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+
+/**
+ * Main entry point for the KineCore Enterprise Server.
+ */
+@SpringBootApplication
+@EnableAsync
+public class KineCoreServerApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(KineCoreServerApplication.class, args);
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\src\main\java\org\kinecore\server\controller\SimulationController.java ---
+package org.kinecore.server.controller;
+
+import org.kinecore.server.domain.SimulationJob;
+import org.kinecore.server.repository.SimulationRepository;
+import org.kinecore.server.service.SimulationService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * REST API for KineCore Simulation Hub.
+ */
+@RestController
+@RequestMapping("/api/simulations")
+@CrossOrigin(origins = "*") // For Dashboard integration
+public class SimulationController {
+
+    private final SimulationService service;
+    private final SimulationRepository repository;
+
+    public SimulationController(SimulationService service, SimulationRepository repository) {
+        this.service = service;
+        this.repository = repository;
+    }
+
+    /**
+     * Triggers a new simulation.
+     * @param request simulation request body
+     * @return the created job
+     */
+    @PostMapping
+    public ResponseEntity<SimulationJob> runSimulation(@RequestBody SimulationRequest request) {
+        SimulationJob job = service.submitJob(request.getModelName(), request.getJsonModel());
+        return ResponseEntity.ok(job);
+    }
+
+    /**
+     * Lists all simulation jobs.
+     * @return list of jobs
+     */
+    @GetMapping
+    public List<SimulationJob> listJobs() {
+        return repository.findAll();
+    }
+
+    /**
+     * Gets a single job by ID.
+     * @param id job ID
+     * @return the job or 404
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<SimulationJob> getJob(@PathVariable String id) {
+        return repository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Request DTO for simulation.
+     */
+    public static class SimulationRequest {
+        private String modelName;
+        private String jsonModel;
+
+        public String getModelName() { return modelName; }
+        public void setModelName(String modelName) { this.modelName = modelName; }
+        public String getJsonModel() { return jsonModel; }
+        public void setJsonModel(String jsonModel) { this.jsonModel = jsonModel; }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\src\main\java\org\kinecore\server\domain\JobStatus.java ---
+package org.kinecore.server.domain;
+
+/**
+ * Lifecycle states of a simulation job.
+ */
+public enum JobStatus {
+    PENDING,
+    RUNNING,
+    COMPLETED,
+    FAILED
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\src\main\java\org\kinecore\server\domain\SimulationJob.java ---
+package org.kinecore.server.domain;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+/**
+ * Tracks a Monte Carlo simulation execution.
+ */
+@Entity
+@Table(name = "simulation_jobs")
+public class SimulationJob {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
+
+    @Column(nullable = false)
+    private String modelName;
+
+    @Enumerated(EnumType.STRING)
+    private JobStatus status;
+
+    private int progress;
+
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String modelDefinitionJson;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String resultJson;
+
+    private String errorMessage;
+
+    public SimulationJob() {}
+
+    // Manual Builder Pattern
+    public static class Builder {
+        private final SimulationJob job = new SimulationJob();
+        public Builder modelName(String val) { job.modelName = val; return this; }
+        public Builder status(JobStatus val) { job.status = val; return this; }
+        public Builder startTime(LocalDateTime val) { job.startTime = val; return this; }
+        public Builder modelDefinitionJson(String val) { job.modelDefinitionJson = val; return this; }
+        public SimulationJob build() { return job; }
+    }
+
+    public static Builder builder() { return new Builder(); }
+
+    // Getters and Setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getModelName() { return modelName; }
+    public void setModelName(String modelName) { this.modelName = modelName; }
+    public JobStatus getStatus() { return status; }
+    public void setStatus(JobStatus status) { this.status = status; }
+    public int getProgress() { return progress; }
+    public void setProgress(int progress) { this.progress = progress; }
+    public LocalDateTime getStartTime() { return startTime; }
+    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+    public LocalDateTime getEndTime() { return endTime; }
+    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+    public String getModelDefinitionJson() { return modelDefinitionJson; }
+    public void setModelDefinitionJson(String modelDefinitionJson) { this.modelDefinitionJson = modelDefinitionJson; }
+    public String getResultJson() { return resultJson; }
+    public void setResultJson(String resultJson) { this.resultJson = resultJson; }
+    public String getErrorMessage() { return errorMessage; }
+    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\src\main\java\org\kinecore\server\repository\SimulationRepository.java ---
+package org.kinecore.server.repository;
+
+import org.kinecore.server.domain.SimulationJob;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+/**
+ * Repository for SimulationJob persistence.
+ */
+@Repository
+public interface SimulationRepository extends JpaRepository<SimulationJob, String> {
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\src\main\resources\application.properties ---
+spring.application.name=kinecore-server
+
+# H2 Console for debugging
+spring.h2.console.enabled=true
+spring.datasource.url=jdbc:h2:mem:kinecore;DB_CLOSE_DELAY=-1
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+
+# JPA
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+
+# Swagger
+springdoc.swagger-ui.path=/swagger-ui.html
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\demo\ClimateSimulation.java ---
+package org.kinecore.demo;
+
+import org.kinecore.engine.*;
+import org.kinecore.solver.*;
+import java.util.Map;
+
+/**
+ * Energy Balance Model with Ice-Albedo Feedback (Task 6).
+ */
+public class ClimateSimulation {
+    /** Constructor */
+    public ClimateSimulation() {}
+
+    /**
+     * Main entry point.
+     * @param args arguments
+     */
+    public static void main(String[] args) {
+        CompartmentalNetworkBuilder builder = new CompartmentalNetworkBuilder();
+        
+        // Temperature compartment (Initial 288 K)
+        builder.addCompartment("Temperature", 288.0);
+        
+        // Parameters
+        double solarConstant = 1361.0 / 4.0;
+        double sigma = 5.67e-8; // Stefan-Boltzmann
+        double emissivity = 0.61;
+        double heatCapacity = 1e8; // Shallow ocean
+        
+        // Ice-Albedo Feedback: Albedo drops as temperature rises
+        builder.addFeedback("ice_albedo", (t, flow, state, params) -> {
+            double temp = state[0];
+            double albedo = temp > 290 ? 0.3 : 0.6;
+            return flow * (1 - albedo);
+        });
+        
+        // Shortwave absorption (Source)
+        builder.addSource("Temperature", (t, state, params) -> solarConstant / heatCapacity, "ice_albedo");
+        
+        // Longwave emission (Sink)
+        builder.addSource("Temperature", (t, state, params) -> {
+            double temp = state[0];
+            return -(emissivity * sigma * Math.pow(temp, 4)) / heatCapacity;
+        });
+        
+        ModelDefinition model = builder.buildDefinition();
+        
+        MonteCarloEnsemble ensemble = new MonteCarloEnsemble.Builder()
+                .model(model)
+                .sampler(seed -> Map.of())
+                .timeRange(0, 50)
+                .stepSize(1.0)
+                .iterations(1)
+                .addOutput("Temp", state -> state[0])
+                .build();
+        
+        MonteCarloEnsemble.SimulationResult result = ensemble.run();
+        System.out.println("Time | Temperature (K)");
+        for (var p : result.getPoints("Temp")) {
+            System.out.printf("%.0f | %.2f%n", p.time, p.p50);
+        }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\demo\SIRSimulation.java ---
+package org.kinecore.demo;
+
+import org.kinecore.engine.*;
+import org.kinecore.solver.*;
+
+import java.util.Map;
+
+/**
+ * Standard SIR (Susceptible-Infected-Recovered) Epidemiological Model (Task 6).
+ */
+public class SIRSimulation {
+    /** Constructor */
+    public SIRSimulation() {}
+
+    /**
+     * Main entry point.
+     * @param args arguments
+     */
+    public static void main(String[] args) {
+        CompartmentalNetworkBuilder builder = new CompartmentalNetworkBuilder();
+        
+        // 1. Setup Compartments
+        builder.addCompartment("S", 999_000)
+               .addCompartment("I", 1_000)
+               .addCompartment("R", 0);
+
+        // 2. Setup Fluxes (beta * S * I / N)
+        double beta = 0.35;
+        double gamma = 0.1;
+        
+        builder.addFlux("S", "I", (t, s, state, params) -> {
+            double totalN = state[0] + state[1] + state[2];
+            return (beta * s * state[1]) / totalN;
+        });
+        
+        builder.addConstantRateFlux("I", "R", gamma);
+        
+        // 3. Numerical Safety
+        builder.clampAtZero(true);
+        
+        ModelDefinition model = builder.buildDefinition();
+        
+        // 4. Run Monte Carlo with parameter uncertainty
+        MonteCarloEnsemble ensemble = new MonteCarloEnsemble.Builder()
+                .model(model)
+                .sampler(seed -> Map.of("beta", 0.35, "gamma", 0.1)) // Deterministic for this demo
+                .timeRange(0, 150)
+                .stepSize(1.0)
+                .iterations(1)
+                .addOutput("Infected", state -> state[1])
+                .addOutput("Recovered", state -> state[2])
+                .build();
+        
+        MonteCarloEnsemble.SimulationResult result = ensemble.run();
+        
+        System.out.println("Day | Infected | Recovered");
+        for (int i = 0; i < result.getPoints("Infected").size(); i++) {
+            var pI = result.getPoints("Infected").get(i);
+            var pR = result.getPoints("Recovered").get(i);
+            System.out.printf("%.0f | %.0f | %.0f%n", pI.time, pI.p50, pR.p50);
+        }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\Compartment.java ---
+package org.kinecore.engine;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
+import java.util.function.Function;
+
+/**
+ * Represents a single population or state variable in the system.
+ * 
+ * <p>Supports parameterized initial values via {@code initialValueParamKey}, 
+ * allowing starting states to be sampled in Monte Carlo iterations.</p>
+ */
+public class Compartment {
+
+    private final String name;
+    private final int index;
+    private final Function<Map<String, Double>, Double> initialValueSupplier;
+    private final String initialValueParamKey;
+    
+    private double min = Double.NEGATIVE_INFINITY;
+    private double max = Double.POSITIVE_INFINITY;
+    private boolean derivativeLocked = false;
+
+    /**
+     * Constructs a compartment with a fixed initial value.
+     * @param name                 human-readable name
+     * @param index                position in the ODE state vector
+     * @param initialValue         fixed starting value
+     */
+    public Compartment(String name, int index, double initialValue) {
+        this(name, index, initialValue, null);
+    }
+
+    /**
+     * Internal constructor for Jackson.
+     */
+    @JsonCreator
+    public Compartment(@JsonProperty("name") String name, 
+                       @JsonProperty("index") int index, 
+                       @JsonProperty("initialValue") double initialValue,
+                       @JsonProperty("initialValueParamKey") String initialValueParamKey) {
+        this.name = name;
+        this.index = index;
+        this.initialValueParamKey = initialValueParamKey;
+        
+        if (initialValueParamKey != null && !initialValueParamKey.isEmpty()) {
+            this.initialValueSupplier = params -> params.getOrDefault(initialValueParamKey, initialValue);
+        } else {
+            this.initialValueSupplier = params -> initialValue;
+        }
+    }
+
+    /**
+     * Constructs a compartment with a parameterized initial value.
+     * @param name                 human-readable name
+     * @param index                position in the ODE state vector
+     * @param initialValueSupplier function of parameters
+     */
+    public Compartment(String name, int index, Function<Map<String, Double>, Double> initialValueSupplier) {
+        this.name = name;
+        this.index = index;
+        this.initialValueSupplier = initialValueSupplier;
+        this.initialValueParamKey = null;
+    }
+
+    /**
+     * Gets the human-readable name of this compartment.
+     * @return the name
+     */
+    @JsonProperty("name")
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Gets the position in the ODE state vector.
+     * @return the index
+     */
+    @JsonProperty("index")
+    public int getIndex() {
+        return index;
+    }
+
+    /**
+     * Gets the parameter key for the initial value, if any.
+     * @return parameter key or null
+     */
+    @JsonProperty("initialValueParamKey")
+    public String getInitialValueParamKey() {
+        return initialValueParamKey;
+    }
+
+    /**
+     * Calculates the initial value for a specific simulation instance.
+     * @param params parameters for the simulation
+     * @return the initial value
+     */
+    public double getInitialValue(Map<String, Double> params) {
+        return initialValueSupplier.apply(params);
+    }
+
+    @JsonProperty("min")
+    public double getMin() { return min; }
+    public Compartment withMin(double min) { this.min = min; return this; }
+
+    @JsonProperty("max")
+    public double getMax() { return max; }
+    public Compartment withMax(double max) { this.max = max; return this; }
+
+    @JsonProperty("derivativeLocked")
+    public boolean isDerivativeLocked() { return derivativeLocked; }
+    public Compartment lockDerivative(boolean locked) { this.derivativeLocked = locked; return this; }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\CompartmentalNetwork.java ---
+package org.kinecore.engine;
+
+import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * A bound compartmental ODE system.
+ * 
+ * <p>This class implements {@link FirstOrderDifferentialEquations} and is responsible for
+ * calculating the rates of change (derivatives) for all compartments in the system.</p>
+ */
+public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
+
+    private final List<Compartment> compartments;
+    private final List<IndexedFlux> fluxes;
+    private final List<IndexedSourceSink> sources;
+    private final List<FeedbackOperator> globalFeedbacks;
+    private final List<AdvectionChain> advectionChains;
+    private final Map<String, ExogenousSignal> exogenousSignals;
+    private final Map<String, Double> params;
+    private final boolean clampAtZero;
+
+    public static class AdvectionChain {
+        public final int[] indices;
+        public boolean accumulateTerminal;
+        public double shiftFrequency;
+
+        @com.fasterxml.jackson.annotation.JsonCreator
+        public AdvectionChain(@com.fasterxml.jackson.annotation.JsonProperty("indices") int[] indices, 
+                              @com.fasterxml.jackson.annotation.JsonProperty("accumulateTerminal") boolean acc, 
+                              @com.fasterxml.jackson.annotation.JsonProperty("shiftFrequency") double freq) {
+            this.indices = indices;
+            this.accumulateTerminal = acc;
+            this.shiftFrequency = freq;
+        }
+    }
+
+    static class IndexedFlux {
+        final int fromIdx;
+        final int toIdx;
+        final Flux flux;
+        final List<FeedbackOperator> localFeedbacks;
+
+        IndexedFlux(int fromIdx, int toIdx, Flux flux, List<FeedbackOperator> localFeedbacks) {
+            this.fromIdx = fromIdx;
+            this.toIdx   = toIdx;
+            this.flux    = flux;
+            this.localFeedbacks = localFeedbacks != null ? Collections.unmodifiableList(localFeedbacks) : Collections.emptyList();
+        }
+    }
+
+    static class IndexedSourceSink {
+        final int idx;
+        final SourceSink sourceSink;
+        final List<FeedbackOperator> localFeedbacks;
+
+        IndexedSourceSink(int idx, SourceSink sourceSink, List<FeedbackOperator> localFeedbacks) {
+            this.idx        = idx;
+            this.sourceSink = sourceSink;
+            this.localFeedbacks = localFeedbacks != null ? Collections.unmodifiableList(localFeedbacks) : Collections.emptyList();
+        }
+    }
+
+    CompartmentalNetwork(List<Compartment>      compartments,
+                         List<IndexedFlux>      fluxes,
+                         List<IndexedSourceSink> sources,
+                         List<FeedbackOperator> globalFeedbacks,
+                         List<AdvectionChain>   advectionChains,
+                         Map<String, ExogenousSignal> exogenousSignals,
+                         Map<String, Double>    params,
+                         boolean                clampAtZero) {
+        this.compartments = Collections.unmodifiableList(compartments);
+        this.fluxes       = Collections.unmodifiableList(fluxes);
+        this.sources      = Collections.unmodifiableList(sources);
+        this.globalFeedbacks = globalFeedbacks != null ? Collections.unmodifiableList(globalFeedbacks) : Collections.emptyList();
+        this.advectionChains = advectionChains != null ? Collections.unmodifiableList(advectionChains) : Collections.emptyList();
+        this.exogenousSignals = exogenousSignals != null ? Collections.unmodifiableMap(exogenousSignals) : Collections.emptyMap();
+        this.params       = params != null ? Collections.unmodifiableMap(params) : Collections.emptyMap();
+        this.clampAtZero  = clampAtZero;
+    }
+
+    /**
+     * Creates a new instance of this network bound to the given parameters.
+     * Crucial for thread-safe Monte Carlo simulations without ThreadLocal.
+     * 
+     * @param newParams the parameter map for this instance
+     * @return a new bound network
+     */
+    public CompartmentalNetwork withParams(Map<String, Double> newParams) {
+        return new CompartmentalNetwork(compartments, fluxes, sources, globalFeedbacks, advectionChains, exogenousSignals, newParams, clampAtZero);
+    }
+
+    @Override
+    public int getDimension() {
+        return compartments.size();
+    }
+
+    @Override
+    public void computeDerivatives(double t, double[] y, double[] yDot) {
+        // 1. Reset derivatives
+        for (int i = 0; i < yDot.length; i++) {
+            yDot[i] = 0.0;
+        }
+
+        // 2. Apply fluxes
+        for (IndexedFlux f : fluxes) {
+            double flow = f.flux.getFlowRate(t, y[f.fromIdx], y, params);
+            for (FeedbackOperator fb : f.localFeedbacks) {
+                flow = fb.apply(t, flow, y, params);
+            }
+            for (FeedbackOperator fb : globalFeedbacks) {
+                flow = fb.apply(t, flow, y, params);
+            }
+            if (flow < 0.0) flow = 0.0;
+
+            // Soft Boundary Handling (Upgrade 3)
+            Compartment source = compartments.get(f.fromIdx);
+            double sourceMin = clampAtZero ? Math.max(0.0, source.getMin()) : source.getMin();
+            flow = applySoftBoundary(flow, y[f.fromIdx], sourceMin, false); 
+
+            Compartment target = compartments.get(f.toIdx);
+            flow = applySoftBoundary(flow, y[f.toIdx], target.getMax(), true);
+
+            yDot[f.fromIdx] -= flow;
+            yDot[f.toIdx]   += flow;
+        }
+
+        // 3. Apply sources/sinks
+        for (IndexedSourceSink ss : sources) {
+            double net = ss.sourceSink.getNetFlow(t, y, params);
+            for (FeedbackOperator fb : ss.localFeedbacks) {
+                net = fb.apply(t, net, y, params);
+            }
+            for (FeedbackOperator fb : globalFeedbacks) {
+                net = fb.apply(t, net, y, params);
+            }
+
+            Compartment c = compartments.get(ss.idx);
+            double cMin = clampAtZero ? Math.max(0.0, c.getMin()) : c.getMin();
+            
+            if (net > 0) {
+                net = applySoftBoundary(net, y[ss.idx], c.getMax(), true);
+            } else if (net < 0) {
+                net = -applySoftBoundary(-net, y[ss.idx], cMin, false);
+            }
+
+            yDot[ss.idx] += net;
+        }
+
+        // 4. Constraint Handling: Physical non-negativity and bounds
+        for (int i = 0; i < yDot.length; i++) {
+            Compartment c = compartments.get(i);
+            if (c.isDerivativeLocked()) {
+                yDot[i] = 0.0;
+            }
+        }
+    }
+
+    /**
+     * Smoothly dampens a flow as it approaches a boundary to prevent
+     * numerical stiffness in adaptive solvers.
+     * 
+     * @param flow     incoming/outgoing rate (assumed absolute/positive for the logic)
+     * @param current  current state value
+     * @param boundary the boundary value to protect
+     * @param isMax    true if boundary is a maximum (inflow damping), false if minimum (outflow damping)
+     * @return         the dampened flow rate
+     */
+    private double applySoftBoundary(double flow, double current, double boundary, boolean isMax) {
+        if (isMax && boundary == Double.POSITIVE_INFINITY) return flow;
+        if (!isMax && boundary == Double.NEGATIVE_INFINITY) return flow;
+
+        double distance = isMax ? (boundary - current) : (current - boundary);
+        
+        // If already breached, stop flow entirely
+        if (distance <= 0) return 0.0;
+        
+        // If far from boundary, return full flow (efficiency)
+        if (distance > 1.0) return flow;
+        
+        // Hyperbolic/Logistic-style damping: smooth transition from 1.0 to 0.0
+        // Factor = distance / (distance + epsilon)
+        double damping = distance / (distance + 0.05);
+        return flow * damping;
+    }
+
+    public List<AdvectionChain> getAdvectionChains() {
+        return advectionChains;
+    }
+    
+    public Map<String, ExogenousSignal> getExogenousSignals() {
+        return exogenousSignals;
+    }
+
+    /** 
+     * Gets the list of compartments.
+     * @return the list of compartments in this network 
+     */
+    public List<Compartment> getCompartments() {
+        return compartments;
+    }
+
+    /** 
+     * Builds the initial state vector from the compartments.
+     * @return a double array of initial values
+     */
+    public double[] buildInitialState() {
+        return compartments.stream()
+                           .mapToDouble(c -> c.getInitialValue(params))
+                           .toArray();
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\CompartmentalNetworkBuilder.java ---
+package org.kinecore.engine;
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.IntStream;
+
+/**
+ * Enhanced Fluent DSL for constructing System Dynamics models.
+ * 
+ * <p>Provides high-level abstractions for age-structured and compartmental models,
+ * including series creation, linear chain fluxes, and non-linear stress responses.</p>
+ */
+public class CompartmentalNetworkBuilder {
+
+    private final List<Compartment>                       compartments = new ArrayList<>();
+    private final List<Compartment>                       lastAddedCompartments = new ArrayList<>();
+    private final List<CompartmentalNetwork.IndexedFlux>      fluxes   = new ArrayList<>();
+    private final List<CompartmentalNetwork.IndexedSourceSink> sources  = new ArrayList<>();
+    private final List<FeedbackOperator>                  globalFeedbacks = new ArrayList<>();
+    private final Map<String, FeedbackOperator>           namedFeedbacks  = new HashMap<>();
+    private final Map<String, int[]>                      aggregates      = new HashMap<>();
+    private final Map<String, ExogenousSignal>            exogenousSignals = new HashMap<>();
+    private final List<CompartmentalNetwork.AdvectionChain> advectionChains = new ArrayList<>();
+    private boolean                                       clampAtZero     = false;
+
+    public class AdvectionChainConfigurator {
+        private final CompartmentalNetwork.AdvectionChain chain;
+        AdvectionChainConfigurator(CompartmentalNetwork.AdvectionChain chain) { this.chain = chain; }
+        public AdvectionChainConfigurator accumulateTerminal(boolean acc) { chain.accumulateTerminal = acc; return this; }
+        public AdvectionChainConfigurator shiftFrequency(double freq) { chain.shiftFrequency = freq; return this; }
+    }
+
+    public CompartmentalNetworkBuilder() {}
+
+    /**
+     * Adds a series of numbered compartments (e.g., Age_0 to Age_100).
+     * @param prefix name prefix
+     * @param start start index
+     * @param end end index
+     * @param initialValueMapper mapper from index to initial value
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addCompartmentSeries(String prefix, int start, int end, Function<Integer, Double> initialValueMapper) {
+        lastAddedCompartments.clear();
+        for (int i = start; i <= end; i++) {
+            Compartment c = new Compartment(prefix + "_" + i, compartments.size(), initialValueMapper.apply(i));
+            compartments.add(c);
+            lastAddedCompartments.add(c);
+        }
+        return this;
+    }
+
+    public CompartmentalNetworkBuilder addCompartment(String name, double initialValue) {
+        lastAddedCompartments.clear();
+        Compartment c = new Compartment(name, compartments.size(), initialValue);
+        compartments.add(c);
+        lastAddedCompartments.add(c);
+        return this;
+    }
+
+    public CompartmentalNetworkBuilder withMin(double min) {
+        for (Compartment c : lastAddedCompartments) c.withMin(min);
+        return this;
+    }
+
+    public CompartmentalNetworkBuilder withMax(double max) {
+        for (Compartment c : lastAddedCompartments) c.withMax(max);
+        return this;
+    }
+
+    public CompartmentalNetworkBuilder lockDerivative(boolean locked) {
+        for (Compartment c : lastAddedCompartments) c.lockDerivative(locked);
+        return this;
+    }
+
+    public AdvectionChainConfigurator addAdvectionChain(String prefix, int start, int end) {
+        int[] indices = IntStream.rangeClosed(start, end).map(i -> requireCompartmentIndex(prefix + "_" + i)).toArray();
+        CompartmentalNetwork.AdvectionChain chain = new CompartmentalNetwork.AdvectionChain(indices, false, 1.0);
+        advectionChains.add(chain);
+        return new AdvectionChainConfigurator(chain);
+    }
+
+    public CompartmentalNetworkBuilder addExogenousVariable(String name, ExogenousSignal signal) {
+        exogenousSignals.put(name, signal);
+        return this;
+    }
+
+    /**
+     * Defines a named aggregate (e.g., "Workers" = Age_15 to Age_64).
+     * @param aggregateName name of the aggregate
+     * @param prefix compartment name prefix
+     * @param start start index
+     * @param end end index
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder defineAggregate(String aggregateName, String prefix, int start, int end) {
+        int[] indices = IntStream.rangeClosed(start, end)
+                .map(i -> requireCompartmentIndex(prefix + "_" + i))
+                .toArray();
+        aggregates.put(aggregateName, indices);
+        return this;
+    }
+
+    /**
+     * Helper to sum an aggregate from the state vector.
+     * @param state the system state vector
+     * @param indices indices to sum
+     * @return the sum
+     */
+    public static double sumAggregate(double[] state, int[] indices) {
+        double sum = 0;
+        for (int idx : indices) sum += state[idx];
+        return sum;
+    }
+
+    /**
+     * Automatically creates fluxes between sequential compartments in a series (e.g., Aging).
+     * @param prefix compartment name prefix
+     * @param start start index
+     * @param end end index
+     * @param fluxLogic the logic for the flow
+     * @param activeFeedbacks names of selective feedbacks to apply
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addChainFlux(String prefix, int start, int end, Flux fluxLogic, String... activeFeedbacks) {
+        for (int i = start; i < end; i++) {
+            addFlux(prefix + "_" + i, prefix + "_" + (i + 1), fluxLogic, activeFeedbacks);
+        }
+        return this;
+    }
+
+    /**
+     * High-level Stress Response: Multiplies target fluxes by an exponential decay 
+     * based on an aggregate ratio (e.g., EDR).
+     * 
+     * @param name reference name for this feedback
+     * @param aggregateNum name of numerator aggregate
+     * @param aggregateDen name of denominator aggregate
+     * @param threshold activation threshold (ReLU-style)
+     * @param sensitivity exponential decay sensitivity
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addStressResponse(String name, String aggregateNum, String aggregateDen, double threshold, double sensitivity) {
+        int[] numIdx = aggregates.get(aggregateNum);
+        int[] denIdx = aggregates.get(aggregateDen);
+        
+        if (numIdx == null || denIdx == null) {
+            throw new IllegalArgumentException("Aggregate not found: " + (numIdx == null ? aggregateNum : aggregateDen));
+        }
+
+        FeedbackOperator stressOp = (t, flow, state, params) -> {
+            double n = 0; for(int i : numIdx) n += state[i];
+            double d = 0; for(int i : denIdx) d += state[i];
+            double ratio = (d > 0) ? (n / d) : 0;
+            double stress = Math.max(0, ratio - threshold);
+            return flow * Math.exp(-sensitivity * stress);
+        };
+        
+        return addFeedback(name, stressOp);
+    }
+
+    /**
+     * Registers a named feedback operator.
+     * @param name reference name
+     * @param feedback the operator
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addFeedback(String name, FeedbackOperator feedback) {
+        namedFeedbacks.put(name, feedback);
+        return this;
+    }
+
+    /**
+     * Adds a global feedback operator applied to ALL fluxes and sources.
+     * @param feedback the operator
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addGlobalFeedback(FeedbackOperator feedback) {
+        globalFeedbacks.add(feedback);
+        return this;
+    }
+
+    /**
+     * Adds a flux between compartments.
+     * @param fromName source
+     * @param toName target
+     * @param flux logic
+     * @param activeFeedbacks names of selective feedbacks to apply
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addFlux(String fromName, String toName, Flux flux, String... activeFeedbacks) {
+        int fromIdx = requireCompartmentIndex(fromName);
+        int toIdx = requireCompartmentIndex(toName);
+        List<FeedbackOperator> localOps = resolveFeedbacks(activeFeedbacks);
+        fluxes.add(new CompartmentalNetwork.IndexedFlux(fromIdx, toIdx, flux, localOps));
+        return this;
+    }
+
+    /**
+     * Convenience for constant rate flux.
+     * @param fromName source
+     * @param toName target
+     * @param rate fixed rate
+     * @param activeFeedbacks names of selective feedbacks to apply
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addConstantRateFlux(String fromName, String toName, double rate, String... activeFeedbacks) {
+        if (rate < 0) throw new IllegalArgumentException("Constant flux rate must be >= 0");
+        return addFlux(fromName, toName, (t, fromVal, state, params) -> rate * fromVal, activeFeedbacks);
+    }
+
+    /**
+     * Adds an external source or sink.
+     * @param compartmentName target
+     * @param sourceSink logic
+     * @param activeFeedbacks names of selective feedbacks to apply
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder addSource(String compartmentName, SourceSink sourceSink, String... activeFeedbacks) {
+        int idx = requireCompartmentIndex(compartmentName);
+        List<FeedbackOperator> localOps = resolveFeedbacks(activeFeedbacks);
+        sources.add(new CompartmentalNetwork.IndexedSourceSink(idx, sourceSink, localOps));
+        return this;
+    }
+
+    /**
+     * Enables numerical clamping at zero.
+     * @param enabled true to enable
+     * @return this builder
+     */
+    public CompartmentalNetworkBuilder clampAtZero(boolean enabled) {
+        this.clampAtZero = enabled;
+        return this;
+    }
+
+    /**
+     * Finalizes the model definition.
+     * @return the stateless model definition
+     */
+    public Model build() {
+        if (compartments.isEmpty()) throw new IllegalStateException("No compartments defined.");
+        
+        List<Model.IndexedFluxDef> fluxDefs = new ArrayList<>();
+        for (CompartmentalNetwork.IndexedFlux f : fluxes) {
+            fluxDefs.add(new Model.IndexedFluxDef(f.fromIdx, f.toIdx, f.flux, f.localFeedbacks));
+        }
+
+        List<Model.IndexedSourceSinkDef> sourceDefs = new ArrayList<>();
+        for (CompartmentalNetwork.IndexedSourceSink s : sources) {
+            sourceDefs.add(new Model.IndexedSourceSinkDef(s.idx, s.sourceSink, s.localFeedbacks));
+        }
+
+        return new Model(
+                new ArrayList<>(compartments),
+                fluxDefs,
+                sourceDefs,
+                new ArrayList<>(globalFeedbacks),
+                new ArrayList<>(advectionChains),
+                new HashMap<>(exogenousSignals),
+                this.clampAtZero
+        );
+    }
+
+    /**
+     * @deprecated Use {@link #build()} instead to get a serializable Model.
+     */
+    @Deprecated
+    public ModelDefinition buildDefinition() {
+        return build();
+    }
+
+    private int requireCompartmentIndex(String name) {
+        for (int i = 0; i < compartments.size(); i++) {
+            if (compartments.get(i).getName().equals(name)) return i;
+        }
+        throw new IllegalArgumentException("Compartment not found: " + name);
+    }
+
+    private List<FeedbackOperator> resolveFeedbacks(String[] names) {
+        List<FeedbackOperator> ops = new ArrayList<>();
+        if (names != null) {
+            for (String n : names) {
+                FeedbackOperator op = namedFeedbacks.get(n);
+                if (op == null) throw new IllegalArgumentException("Feedback not found: " + n);
+                ops.add(op);
+            }
+        }
+        return ops;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\ExogenousSignal.java ---
+package org.kinecore.engine;
+
+/**
+ * Represents a normalized exogenous signal for injection into ODE feedback loops.
+ */
+@FunctionalInterface
+public interface ExogenousSignal {
+    double getValueAt(double t, int ageIdx);
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\FeedbackFactory.java ---
+package org.kinecore.engine;
+
+import java.util.Map;
+
+/**
+ * Factory for creating standardized, mathematically safe {@link FeedbackOperator}s.
+ *
+ * <p>All operators produced here are numerically verified transfer functions that
+ * prevent stiffness and phantom-stress artifacts in ODE integration.</p>
+ */
+public class FeedbackFactory {
+
+    /**
+     * Creates a builder for a logistic (sigmoid) feedback curve.
+     *
+     * @return a new {@link LogisticCurveBuilder}
+     */
+    public static LogisticCurveBuilder logisticCurve() {
+        return new LogisticCurveBuilder();
+    }
+
+    /**
+     * Builder for a logistic-curve {@link FeedbackOperator}.
+     *
+     * <p>The operator scales an incoming flow by a sigmoid function of a
+     * user-defined stress signal, enabling non-linear threshold behaviour such as
+     * "Youth Flight" emigration acceleration past an economic tipping-point.</p>
+     */
+    public static class LogisticCurveBuilder {
+        private double baseValue  = 1.0;
+        private double maxValue   = 5.0;
+        private double midpoint   = 0.0;
+        private double growthRate = 1.0;
+        private FeedbackOperator stressExtractor = (t, flow, state, params) -> flow;
+
+        /**
+         * Sets the minimum multiplier applied when stress is zero or negative.
+         *
+         * @param baseValue minimum multiplier (default 1.0)
+         * @return this builder
+         */
+        public LogisticCurveBuilder withBaseValue(double baseValue) {
+            this.baseValue = baseValue;
+            return this;
+        }
+
+        /**
+         * Sets the maximum multiplier approached as stress grows without bound.
+         *
+         * @param maxValue maximum multiplier (default 5.0)
+         * @return this builder
+         */
+        public LogisticCurveBuilder withMaxValue(double maxValue) {
+            this.maxValue = maxValue;
+            return this;
+        }
+
+        /**
+         * Sets the stress level at which the multiplier is halfway between base and max.
+         *
+         * @param midpoint inflection point of the sigmoid (default 0.0)
+         * @return this builder
+         */
+        public LogisticCurveBuilder withMidpoint(double midpoint) {
+            this.midpoint = midpoint;
+            return this;
+        }
+
+        /**
+         * Sets the steepness of the transition between base and max.
+         *
+         * @param growthRate sigmoid growth rate; higher values create sharper transitions (default 1.0)
+         * @return this builder
+         */
+        public LogisticCurveBuilder withGrowthRate(double growthRate) {
+            this.growthRate = growthRate;
+            return this;
+        }
+
+        /**
+         * Sets a {@link FeedbackOperator} used to extract the scalar stress signal
+         * from the full system state. Defaults to using the raw flow value as stress.
+         *
+         * @param extractor operator that maps (t, flow, state, params) to a scalar stress value
+         * @return this builder
+         */
+        public LogisticCurveBuilder withStressExtractor(FeedbackOperator extractor) {
+            this.stressExtractor = extractor;
+            return this;
+        }
+
+        /**
+         * Builds and returns the configured logistic {@link FeedbackOperator}.
+         *
+         * @return a new {@link FeedbackOperator} that applies the sigmoid multiplier
+         */
+        public FeedbackOperator build() {
+            return (t, flow, state, params) -> {
+                double stress = stressExtractor.apply(t, flow, state, params);
+                if (stress <= 0.0) {
+                    return flow * baseValue; // Bypass for negative/zero stress
+                }
+                double multiplier = baseValue + (maxValue - baseValue) / (1.0 + Math.exp(-growthRate * (stress - midpoint)));
+                return flow * multiplier;
+            };
+        }
+
+        /**
+         * Evaluates the logistic curve for a given stress level without applying it to a flow.
+         * Useful for debugging and visualising the transfer function shape.
+         *
+         * @param stress the stress input value
+         * @return the multiplier the curve would produce at this stress level
+         */
+        public double evaluate(double stress) {
+            if (stress <= 0.0) {
+                return baseValue;
+            }
+            return baseValue + (maxValue - baseValue) / (1.0 + Math.exp(-growthRate * (stress - midpoint)));
+        }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\Model.java ---
+package org.kinecore.engine;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.*;
+
+/**
+ * A concrete, serializable representation of a System Dynamics model.
+ * 
+ * <p>Unlike a functional lambda, this class stores the full model structure
+ * (compartments, fluxes, advection chains) as data, allowing it to be
+ * round-tripped through the REST API for the Next.js dashboard.</p>
+ */
+public class Model implements ModelDefinition {
+
+    private final List<Compartment> compartments;
+    private final List<IndexedFluxDef> fluxes;
+    private final List<IndexedSourceSinkDef> sources;
+    private final List<FeedbackOperator> globalFeedbacks;
+    private final List<CompartmentalNetwork.AdvectionChain> advectionChains;
+    private final Map<String, ExogenousSignal> exogenousSignals;
+    private final boolean clampAtZero;
+
+    @JsonCreator
+    public Model(@JsonProperty("compartments")     List<Compartment> compartments,
+                 @JsonProperty("fluxes")           List<IndexedFluxDef> fluxes,
+                 @JsonProperty("sources")          List<IndexedSourceSinkDef> sources,
+                 @JsonProperty("globalFeedbacks")  List<FeedbackOperator> globalFeedbacks,
+                 @JsonProperty("advectionChains")  List<CompartmentalNetwork.AdvectionChain> advectionChains,
+                 @JsonProperty("exogenousSignals") Map<String, ExogenousSignal> exogenousSignals,
+                 @JsonProperty("clampAtZero")      boolean clampAtZero) {
+        this.compartments = compartments != null ? compartments : new ArrayList<>();
+        this.fluxes = fluxes != null ? fluxes : new ArrayList<>();
+        this.sources = sources != null ? sources : new ArrayList<>();
+        this.globalFeedbacks = globalFeedbacks != null ? globalFeedbacks : new ArrayList<>();
+        this.advectionChains = advectionChains != null ? advectionChains : new ArrayList<>();
+        this.exogenousSignals = exogenousSignals != null ? exogenousSignals : new HashMap<>();
+        this.clampAtZero = clampAtZero;
+    }
+
+    @Override
+    public CompartmentalNetwork bind(Map<String, Double> params) {
+        List<CompartmentalNetwork.IndexedFlux> boundFluxes = new ArrayList<>();
+        for (IndexedFluxDef f : fluxes) {
+            boundFluxes.add(new CompartmentalNetwork.IndexedFlux(f.from, f.to, f.logic, f.feedbacks));
+        }
+
+        List<CompartmentalNetwork.IndexedSourceSink> boundSources = new ArrayList<>();
+        for (IndexedSourceSinkDef s : sources) {
+            boundSources.add(new CompartmentalNetwork.IndexedSourceSink(s.index, s.logic, s.feedbacks));
+        }
+
+        return new CompartmentalNetwork(
+                compartments,
+                boundFluxes,
+                boundSources,
+                globalFeedbacks,
+                advectionChains,
+                exogenousSignals,
+                params,
+                clampAtZero
+        );
+    }
+
+    @JsonProperty("compartments")
+    public List<Compartment> getCompartments() { return compartments; }
+
+    @JsonProperty("fluxes")
+    public List<IndexedFluxDef> getFluxes() { return fluxes; }
+
+    @JsonProperty("sources")
+    public List<IndexedSourceSinkDef> getSources() { return sources; }
+
+    @JsonProperty("globalFeedbacks")
+    public List<FeedbackOperator> getGlobalFeedbacks() { return globalFeedbacks; }
+
+    @JsonProperty("advectionChains")
+    public List<CompartmentalNetwork.AdvectionChain> getAdvectionChains() { return advectionChains; }
+
+    @JsonProperty("exogenousSignals")
+    public Map<String, ExogenousSignal> getExogenousSignals() { return exogenousSignals; }
+
+    @JsonProperty("clampAtZero")
+    public boolean isClampAtZero() { return clampAtZero; }
+
+    /** Helper DTO for serializing internal flux state */
+    public static class IndexedFluxDef {
+        public int from, to;
+        public Flux logic;
+        public List<FeedbackOperator> feedbacks;
+
+        @JsonCreator
+        public IndexedFluxDef(@JsonProperty("from") int from, 
+                             @JsonProperty("to") int to, 
+                             @JsonProperty("logic") Flux logic, 
+                             @JsonProperty("feedbacks") List<FeedbackOperator> feedbacks) {
+            this.from = from;
+            this.to = to;
+            this.logic = logic;
+            this.feedbacks = feedbacks != null ? feedbacks : new ArrayList<>();
+        }
+    }
+
+    /** Helper DTO for serializing internal source/sink state */
+    public static class IndexedSourceSinkDef {
+        public int index;
+        public SourceSink logic;
+        public List<FeedbackOperator> feedbacks;
+
+        @JsonCreator
+        public IndexedSourceSinkDef(@JsonProperty("index") int index, 
+                                   @JsonProperty("logic") SourceSink logic, 
+                                   @JsonProperty("feedbacks") List<FeedbackOperator> feedbacks) {
+            this.index = index;
+            this.logic = logic;
+            this.feedbacks = feedbacks != null ? feedbacks : new ArrayList<>();
+        }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\ModelDefinition.java ---
+package org.kinecore.engine;
+
+import java.util.Map;
+
+/**
+ * A stateless definition of a compartmental model that can be bound to parameters
+ * to create a runnable instance.
+ */
+@FunctionalInterface
+public interface ModelDefinition {
+
+    /**
+     * Binds the model definition to a specific set of parameters.
+     *
+     * @param params parameter map (e.g. from Monte Carlo sampling)
+     * @return a bound, runnable compartmental network
+     */
+    CompartmentalNetwork bind(Map<String, Double> params);
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\SignalBuilder.java ---
+package org.kinecore.engine;
+
+/**
+ * Builds resilient, normalized data pipelines for {@link ExogenousSignal} variables.
+ *
+ * <p>Supports Z-score standardization (from explicit parameters, or auto-computed
+ * from a dataset) and clamped lower bounds to enforce signal boundary conditions.</p>
+ */
+public class SignalBuilder {
+    private final ExogenousSignal source;
+    private boolean standardScaling = false;
+    private double mean   = 0.0;
+    private double stdDev = 1.0;
+    private Double lowerBound = null;
+
+    /**
+     * Constructs a SignalBuilder wrapping the given raw signal.
+     * @param source the raw {@link ExogenousSignal} to process
+     */
+    public SignalBuilder(ExogenousSignal source) {
+        this.source = source;
+    }
+
+    /**
+     * Enables Z-score standardization using the mean and stdDev
+     * previously set by {@link #applyStandardScaling(double, double)} or
+     * {@link #applyStandardScaling(double[])}. If neither has been called,
+     * the defaults (mean=0, stdDev=1) are used (no-op transformation).
+     *
+     * @return this builder
+     */
+    public SignalBuilder applyStandardScaling() {
+        this.standardScaling = true;
+        return this;
+    }
+
+    /**
+     * Applies Z-score standardization using explicitly supplied statistics.
+     *
+     * @param mean   population mean of the raw signal
+     * @param stdDev population standard deviation of the raw signal (must be &gt; 0)
+     * @return this builder
+     */
+    public SignalBuilder applyStandardScaling(double mean, double stdDev) {
+        this.mean   = mean;
+        this.stdDev = stdDev;
+        this.standardScaling = true;
+        return this;
+    }
+
+    /**
+     * Computes mean and standard deviation from the supplied dataset and then
+     * enables Z-score standardization.
+     *
+     * @param dataset array of raw values from which to compute statistics; must be non-null and non-empty
+     * @return this builder
+     */
+    public SignalBuilder applyStandardScaling(double[] dataset) {
+        if (dataset == null || dataset.length == 0) return this;
+        double sum = 0;
+        for (double v : dataset) sum += v;
+        this.mean = sum / dataset.length;
+
+        double sqSum = 0;
+        for (double v : dataset) sqSum += (v - this.mean) * (v - this.mean);
+        this.stdDev = Math.max(1e-9, Math.sqrt(sqSum / dataset.length));
+
+        this.standardScaling = true;
+        return this;
+    }
+
+    /**
+     * Clamps the (possibly standardized) signal value so it never falls below {@code bound}.
+     *
+     * @param bound minimum output value (e.g., 0.0 to prevent negative population signals)
+     * @return this builder
+     */
+    public SignalBuilder applyLowerBound(double bound) {
+        this.lowerBound = bound;
+        return this;
+    }
+
+    /**
+     * Builds and returns the processed {@link ExogenousSignal}.
+     *
+     * @return a new {@link ExogenousSignal} that applies the configured transformations
+     */
+    public ExogenousSignal build() {
+        return (t, ageIdx) -> {
+            double v = source.getValueAt(t, ageIdx);
+            if (standardScaling) {
+                v = (v - mean) / stdDev;
+            }
+            if (lowerBound != null && v < lowerBound) {
+                v = lowerBound;
+            }
+            return v;
+        };
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\math\interpolate\SpatiotemporalField.java ---
+package org.kinecore.math.interpolate;
+
+import org.apache.commons.math3.analysis.interpolation.BicubicInterpolator;
+import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
+
+/**
+ * A 2D spatiotemporal field for interpolating rates (e.g. fertility by age and time).
+ * 
+ * <p>Uses Bicubic Spline interpolation with fallback to bilinear for small grids.</p>
+ */
+public class SpatiotemporalField {
+    private final double[] x;
+    private final double[] y;
+    private final BicubicInterpolator bicubicInterpolator;
+    private org.apache.commons.math3.analysis.BivariateFunction bicubic;
+    private final PolynomialSplineFunction[] linearRows;
+    private final boolean useBicubic;
+
+    /**
+     * Constructs a field.
+     * @param x x-axis grid
+     * @param y y-axis grid
+     * @param values 2D values [x][y]
+     */
+    public SpatiotemporalField(double[] x, double[] y, double[][] values) {
+        this.x = x.clone();
+        this.y = y.clone();
+        if (x.length >= 4 && y.length >= 4) {
+            bicubicInterpolator = new BicubicInterpolator();
+            bicubic = bicubicInterpolator.interpolate(x, y, values);
+            linearRows = null;
+            useBicubic = true;
+        } else {
+            bicubicInterpolator = null;
+            bicubic = null;
+            linearRows = new PolynomialSplineFunction[x.length];
+            LinearInterpolator li = new LinearInterpolator();
+            for (int i = 0; i < x.length; i++) {
+                linearRows[i] = li.interpolate(y, values[i]);
+            }
+            useBicubic = false;
+        }
+    }
+
+    /**
+     * Interpolates the value at (xVal, yVal).
+     * @param xVal coordinate 1
+     * @param yVal coordinate 2
+     * @return interpolated value
+     */
+    public double value(double xVal, double yVal) {
+        if (useBicubic) {
+            return bicubic.value(xVal, yVal);
+        }
+        // Find the two surrounding x indices
+        int ix = searchIndex(x, xVal);
+        int iy = searchIndex(y, yVal);
+        double x0 = x[ix], x1 = x[ix + 1];
+        double y0 = y[iy], y1 = y[iy + 1];
+        double wx = (xVal - x0) / (x1 - x0);
+        double wy = (yVal - y0) / (y1 - y0);
+        
+        double v00 = linearRows[ix].value(yVal);
+        double v10 = linearRows[ix + 1].value(yVal);
+        // Bilinear interpolation in x
+        return v00 * (1 - wx) + v10 * wx;
+    }
+
+    private int searchIndex(double[] arr, double val) {
+        int idx = java.util.Arrays.binarySearch(arr, val);
+        if (idx < 0) idx = -idx - 2;
+        if (idx < 0) idx = 0;
+        if (idx >= arr.length - 1) idx = arr.length - 2;
+        return idx;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\solver\MonteCarloComponents.java ---
+package org.kinecore.solver;
+
+import java.util.Map;
+
+/**
+ * Modular components for the Monte Carlo pipeline.
+ */
+public interface MonteCarloComponents {
+
+    /**
+     * Interface for sampling parameters.
+     */
+    @FunctionalInterface
+    interface ParameterSampler {
+        /**
+         * Samples parameters based on a seed.
+         * @param seed the random seed
+         * @return a map of parameters
+         */
+        Map<String, Double> sample(long seed);
+    }
+
+    /**
+     * Interface for running a single deterministic simulation.
+     */
+    @FunctionalInterface
+    interface DeterministicRunner {
+        /**
+         * Runs a single simulation.
+         * @param network the network
+         * @param solver the ODE solver
+         * @param t0 start time
+         * @param t1 end time
+         * @param stepSize step size
+         * @param aggregators output aggregators
+         * @return a map of trajectories
+         */
+        Map<String, double[]> run(org.kinecore.engine.CompartmentalNetwork network, ODESolver solver,
+                                 double t0, double t1, double stepSize,
+                                 Map<String, java.util.function.Function<double[], Double>> aggregators);
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\solver\SensitivityEngine.java ---
+package org.kinecore.solver;
+
+import java.util.*;
+import java.util.stream.IntStream;
+
+/**
+ * Calculates sensitivity of simulation outcomes to input parameters.
+ * 
+ * <p>Supports both linear (Pearson) and non-linear (Spearman Rank) correlation
+ * analysis to identify critical model drivers.</p>
+ */
+public class SensitivityEngine {
+
+    /**
+     * Private constructor for utility class.
+     */
+    private SensitivityEngine() {}
+
+    /**
+     * Analyzes the sensitivity of a target output variable using Spearman Rank Correlation (Default).
+     * 
+     * <p>Spearman is the default as it robustly captures non-linear, monotonic
+     * relationships common in demographic feedback loops.</p>
+     */
+    public static Map<String, Double> analyze(MonteCarloEnsemble.SimulationResult result, String targetOutputName) {
+        return analyze(result, targetOutputName, true);
+    }
+
+    /**
+     * Analyzes the sensitivity of a target output variable.
+     * 
+     * @param result the simulation result containing iteration-level data
+     * @param targetOutputName the name of the output variable to analyze
+     * @param useSpearman if true, use Spearman Rank correlation (non-linear); if false, Pearson (linear)
+     * @return a map of parameter names (prefixed with 'p.') to their correlation coefficient
+     */
+    public static Map<String, Double> analyze(MonteCarloEnsemble.SimulationResult result, 
+                                             String targetOutputName, 
+                                             boolean useSpearman) {
+        List<Map<String, Double>> paramsList = result.getSampledParameters();
+        List<Map<String, Double>> outcomesList = result.getFinalStateSummaries();
+        
+        if (paramsList.isEmpty()) return Collections.emptyMap();
+        
+        Set<String> paramNames = paramsList.get(0).keySet();
+        Map<String, Double> correlations = new HashMap<>();
+        
+        double[] outcomes = outcomesList.stream()
+                .mapToDouble(m -> m.getOrDefault(targetOutputName, 0.0))
+                .toArray();
+        
+        if (useSpearman) {
+            outcomes = rankTransform(outcomes);
+        }
+        
+        for (String paramName : paramNames) {
+            double[] paramValues = paramsList.stream()
+                    .mapToDouble(m -> m.getOrDefault(paramName, 0.0))
+                    .toArray();
+            
+            if (useSpearman) {
+                paramValues = rankTransform(paramValues);
+            }
+            
+            // Prefix keys with 'p.' to avoid collision with outcomes in joint analysis maps
+            correlations.put("p." + paramName, calculatePearsonCorrelation(paramValues, outcomes));
+        }
+        
+        return correlations;
+    }
+
+    private static double calculatePearsonCorrelation(double[] x, double[] y) {
+        if (x.length != y.length || x.length == 0) return 0.0;
+        
+        double sumX = 0, sumY = 0, sumXY = 0;
+        double sumX2 = 0, sumY2 = 0;
+        int n = x.length;
+        
+        for (int i = 0; i < n; i++) {
+            sumX += x[i];
+            sumY += y[i];
+            sumXY += x[i] * y[i];
+            sumX2 += x[i] * x[i];
+            sumY2 += y[i] * y[i];
+        }
+        
+        double numerator = n * sumXY - sumX * sumY;
+        double denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+        
+        if (denominator == 0) return 0.0;
+        return numerator / denominator;
+    }
+
+    /**
+     * Converts raw values to fractional ranks (1-indexed).
+     * Handles ties by averaging ranks (e.g. [10, 20, 20, 30] -> [1, 2.5, 2.5, 4]).
+     */
+    private static double[] rankTransform(double[] values) {
+        int n = values.length;
+        double[] ranks = new double[n];
+        
+        Integer[] indices = IntStream.range(0, n).boxed().toArray(Integer[]::new);
+        Arrays.sort(indices, Comparator.comparingDouble(i -> values[i]));
+        
+        int i = 0;
+        while (i < n) {
+            int j = i + 1;
+            while (j < n && values[indices[j]] == values[indices[i]]) {
+                j++;
+            }
+            
+            // Average rank for the tied group
+            double avgRank = (i + 1 + j) / 2.0;
+            for (int k = i; k < j; k++) {
+                ranks[indices[k]] = avgRank;
+            }
+            i = j;
+        }
+        
+        return ranks;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\test\java\org\kinecore\BenchmarksTest.java ---
+package org.kinecore;
+
+import org.kinecore.engine.*;
+import org.kinecore.solver.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.Map;
+
+/**
+ * Analytical Benchmarks (Task 5).
+ */
+public class BenchmarksTest {
+
+    @Test
+    public void testExponentialGrowth() {
+        // Model: dy/dt = 1 * y  =>  y(t) = y0 * e^t
+        CompartmentalNetworkBuilder builder = new CompartmentalNetworkBuilder();
+        builder.addCompartment("Y", 1.0);
+        builder.addSource("Y", (t, state, params) -> state[0]); // dy/dt = y
+        
+        ModelDefinition model = builder.buildDefinition();
+        
+        MonteCarloEnsemble ensemble = new MonteCarloEnsemble.Builder()
+                .model(model)
+                .sampler(seed -> Map.of())
+                .timeRange(0, 1)
+                .stepSize(1.0)
+                .iterations(1)
+                .addOutput("Y", state -> state[0])
+                .build();
+        
+        MonteCarloEnsemble.SimulationResult result = ensemble.run();
+        double finalY = result.getPoints("Y").get(1).p50;
+        
+        // At t=1, y = e^1 ≈ 2.718
+        assertEquals(Math.E, finalY, 0.001);
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\test\java\org\kinecore\ConservationTest.java ---
+package org.kinecore;
+
+import org.kinecore.engine.*;
+import org.kinecore.solver.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.Map;
+
+/**
+ * Mass Conservation Tests (Task 5).
+ */
+public class ConservationTest {
+
+    @Test
+    public void testClosedSystemConservation() {
+        // Simple closed system: A -> B
+        CompartmentalNetworkBuilder builder = new CompartmentalNetworkBuilder();
+        builder.addCompartment("A", 100.0)
+               .addCompartment("B", 0.0);
+        
+        builder.addConstantRateFlux("A", "B", 0.5);
+        
+        ModelDefinition model = builder.buildDefinition();
+        
+        MonteCarloEnsemble ensemble = new MonteCarloEnsemble.Builder()
+                .model(model)
+                .sampler(seed -> Map.of())
+                .timeRange(0, 10)
+                .stepSize(1.0)
+                .iterations(1)
+                .addOutput("Total", state -> state[0] + state[1])
+                .build();
+        
+        MonteCarloEnsemble.SimulationResult result = ensemble.run();
+        
+        for (var p : result.getPoints("Total")) {
+            assertEquals(100.0, p.p50, 1e-9, "Mass must be conserved in a closed system");
+        }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-dashboard\src\app\layout.tsx ---
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Sidebar } from "@/components/Sidebar";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "KineCore | Simulation Hub",
+  description: "Enterprise System Dynamics Forecasting Engine",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={`${inter.className} min-h-screen flex bg-[#020205]`}>
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto px-8 py-8">
+          {children}
+        </main>
+      </body>
+    </html>
+  );
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\solver\ODESolver.java ---
+package org.kinecore.solver;
+
+import org.apache.commons.math3.ode.sampling.StepHandler;
+import org.kinecore.engine.CompartmentalNetwork;
+
+/**
+ * Pluggable ODE solver interface.
+ */
+public interface ODESolver {
+    /**
+     * Integrates the network from t0 to t1.
+     *
+     * @param network     the compartmental system
+     * @param t0          start time
+     * @param t1          end time
+     * @param y0          initial state (will be modified to final state)
+     * @param stepHandler optional step handler for recording intermediate states
+     * @throws Exception if integration fails
+     */
+    void integrate(CompartmentalNetwork network, double t0, double t1, double[] y0,
+                   StepHandler stepHandler) throws Exception;
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\serialization\ModelLoader.java ---
+package org.kinecore.serialization;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.kinecore.engine.Model;
+import org.kinecore.engine.ModelDefinition;
+
+import java.io.IOException;
+
+/**
+ * Enterprise-grade loader for System Dynamics models.
+ * 
+ * <p>Leverages Jackson's polymorphic deserialization to inflate complex model
+ * structures (including non-linear feedbacks and stochastic sources) directly
+ * from JSON payloads submitted by the React dashboard.</p>
+ */
+public class ModelLoader {
+
+    private final ObjectMapper mapper;
+
+    public ModelLoader() {
+        this.mapper = new ObjectMapper();
+        this.mapper.registerModule(new JavaTimeModule());
+        this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
+    }
+
+    /**
+     * Deserializes a model from JSON.
+     * 
+     * @param json model structure JSON
+     * @return a concrete Model instance that implements ModelDefinition
+     * @throws IOException if the JSON is malformed or types are missing
+     */
+    public Model load(String json) throws IOException {
+        return mapper.readValue(json, Model.class);
+    }
+
+    /**
+     * Serializes a model to JSON.
+     * 
+     * @param model the model to save
+     * @return JSON string representation
+     * @throws IOException if serialization fails
+     */
+    public String save(Model model) throws IOException {
+        return mapper.writeValueAsString(model);
+    }
+
+    /**
+     * Static convenience method for quick loading.
+     * 
+     * @param json the JSON content
+     * @return a ModelDefinition
+     * @throws IOException if parsing fails
+     */
+    public static ModelDefinition fromJson(String json) throws IOException {
+        return new ModelLoader().load(json);
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\solver\impl\DormandPrince853Solver.java ---
+package org.kinecore.solver.impl;
+
+import org.apache.commons.math3.ode.nonstiff.DormandPrince853Integrator;
+import org.apache.commons.math3.ode.sampling.StepHandler;
+import org.kinecore.engine.CompartmentalNetwork;
+import org.kinecore.solver.ODESolver;
+
+/**
+ * Adaptive-step ODE solver using the Dormand-Prince 8(5,3) algorithm.
+ */
+public class DormandPrince853Solver implements ODESolver {
+    private final double minStep;
+    private final double maxStep;
+    private final double relativeTolerance;
+    private final double absoluteTolerance;
+
+    /**
+     * Constructs a solver.
+     * @param minStep minimum step size
+     * @param maxStep maximum step size
+     * @param relTol relative tolerance
+     * @param absTol absolute tolerance
+     */
+    public DormandPrince853Solver(double minStep, double maxStep, double relTol, double absTol) {
+        this.minStep = minStep;
+        this.maxStep = maxStep;
+        this.relativeTolerance = relTol;
+        this.absoluteTolerance = absTol;
+    }
+
+    @Override
+    public void integrate(CompartmentalNetwork network, double t0, double t1,
+                          double[] y0, StepHandler stepHandler) throws Exception {
+        DormandPrince853Integrator integrator = new DormandPrince853Integrator(
+                minStep, maxStep, relativeTolerance, absoluteTolerance);
+        if (stepHandler != null) {
+            integrator.addStepHandler(stepHandler);
+        }
+        integrator.integrate(network, t0, y0, t1, y0);
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\solver\impl\GraggBulirschStoerSolver.java ---
+package org.kinecore.solver.impl;
+
+import org.apache.commons.math3.ode.nonstiff.GraggBulirschStoerIntegrator;
+import org.apache.commons.math3.ode.sampling.StepHandler;
+import org.kinecore.engine.CompartmentalNetwork;
+import org.kinecore.solver.ODESolver;
+
+/**
+ * High-performance solver for stiff systems using the Gragg-Bulirsch-Stoer algorithm (Task 3).
+ * 
+ * <p>This solver is more stable for systems with widely varying time scales (e.g., fast chemical 
+ * reactions mixed with slow diffusion).</p>
+ */
+public class GraggBulirschStoerSolver implements ODESolver {
+    private final double minStep;
+    private final double maxStep;
+    private final double relativeTolerance;
+    private final double absoluteTolerance;
+
+    /**
+     * Constructs a solver.
+     * @param minStep minimum step size
+     * @param maxStep maximum step size
+     * @param relTol relative tolerance
+     * @param absTol absolute tolerance
+     */
+    public GraggBulirschStoerSolver(double minStep, double maxStep, double relTol, double absTol) {
+        this.minStep = minStep;
+        this.maxStep = maxStep;
+        this.relativeTolerance = relTol;
+        this.absoluteTolerance = absTol;
+    }
+
+    @Override
+    public void integrate(CompartmentalNetwork network, double t0, double t1,
+                          double[] y0, StepHandler stepHandler) throws Exception {
+        GraggBulirschStoerIntegrator integrator = new GraggBulirschStoerIntegrator(
+                minStep, maxStep, relativeTolerance, absoluteTolerance);
+        if (stepHandler != null) {
+            integrator.addStepHandler(stepHandler);
+        }
+        integrator.integrate(network, t0, y0, t1, y0);
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\demo\KeralaSimulation.java ---
+package org.kinecore.demo;
+
+import org.kinecore.engine.*;
+import org.kinecore.solver.*;
+import org.kinecore.solver.impl.DormandPrince853Solver;
+
+import java.util.Arrays;
+import java.util.Map;
+
+/**
+ * Validates the KineCore library by implementing the Kerala Demographic Model
+ * using the new ModelDefinition, ODESolver, and modular Monte Carlo components.
+ */
+public class KeralaSimulation {
+
+    /** Constructor */
+    public KeralaSimulation() {}
+
+    /**
+     * Main entry point.
+     * @param args arguments
+     */
+    public static void main(String[] args) {
+        // 1. Build the model definition (stateless)
+        ModelDefinition keralaModel = createKeralaModel();
+
+        // 2. Define the Monte Carlo ensemble
+        MonteCarloEnsemble ensemble = new MonteCarloEnsemble.Builder()
+                .model(keralaModel)
+                // Sample parameters (Patch 5: ParameterSampler)
+                .sampler(seed -> {
+                    var rng = new org.apache.commons.math3.random.MersenneTwister(seed);
+                    return Map.of(
+                        "fertility_scale", rng.nextGaussian() * 0.05 + 1.0,
+                        "mortality_scale", rng.nextGaussian() * 0.03 + 1.0
+                    );
+                })
+                // Use a pluggable solver (Patch 2: ODESolver)
+                .solver(new DormandPrince853Solver(1e-6, 1.0, 1e-8, 1e-8))
+                .timeRange(2020, 2120)
+                .stepSize(1.0)
+                .iterations(1000)
+                // Multi-metric tracking (Gap 3 fix)
+                .addOutput("Total_Population", state -> Arrays.stream(state).sum())
+                .addOutput("Elderly_Population", state -> Arrays.stream(state, 65, 101).sum())
+                .build();
+
+        // 3. Run the simulation
+        MonteCarloEnsemble.SimulationResult result = ensemble.run();
+
+        // 4. Output results
+        System.out.println("Year | Median Pop | p5 Pop | p95 Pop");
+        for (var p : result.getPoints("Total_Population")) {
+            System.out.printf("%.0f | %.0f | %.0f | %.0f%n", p.time, p.p50, p.p5, p.p95);
+        }
+    }
+
+    private static ModelDefinition createKeralaModel() {
+        CompartmentalNetworkBuilder builder = new CompartmentalNetworkBuilder();
+
+        // Add age compartments (0..100)
+        for (int i = 0; i <= 100; i++) {
+            builder.addCompartment("age_" + i, 50000.0);
+        }
+
+        // Global Feedback: Elderly Dependency Ratio (Gap 1 fix)
+        builder.addFeedback("edr_stress", (t, flow, state, params) -> {
+            double workers = Arrays.stream(state, 15, 65).sum();
+            double elderly = Arrays.stream(state, 65, 101).sum();
+            double ratio = workers == 0 ? 1 : elderly / workers;
+            double stress = Math.max(0, ratio - 0.35);
+            return flow * Math.max(0.35, Math.exp(-2.5 * stress));
+        });
+
+        // Aging Fluxes (Selective Feedback: No feedback on aging!)
+        for (int i = 0; i < 100; i++) {
+            builder.addConstantRateFlux("age_" + i, "age_" + (i + 1), 1.0);
+        }
+
+        // Mortality Sinks
+        for (int i = 0; i <= 100; i++) {
+            final int age = i;
+            builder.addSource("age_" + i, (t, state, params) -> {
+                double baseMortality = 0.01; // simplified
+                return -baseMortality * state[age] * params.getOrDefault("mortality_scale", 1.0);
+            });
+        }
+
+        // Fertility Source (Applies EDR stress feedback!)
+        builder.addSource("age_0", (t, state, params) -> {
+            double births = 0;
+            for (int a = 15; a <= 49; a++) {
+                births += 0.05 * state[a]; // simplified TFR
+            }
+            return births * params.getOrDefault("fertility_scale", 1.0);
+        }, "edr_stress");
+
+        return builder.buildDefinition();
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\solver\MonteCarloEnsemble.java ---
+package org.kinecore.solver;
+
+import com.tdunning.math.stats.TDigest;
+import org.apache.commons.math3.ode.sampling.StepHandler;
+import org.apache.commons.math3.ode.sampling.StepInterpolator;
+import org.kinecore.engine.CompartmentalNetwork;
+import org.kinecore.engine.ModelDefinition;
+import org.kinecore.solver.impl.DormandPrince853Solver;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.IntStream;
+
+/**
+ * Orchestrates a parallel Monte Carlo simulation.
+ */
+public class MonteCarloEnsemble {
+
+    private final ModelDefinition modelDefinition;
+    private final MonteCarloComponents.ParameterSampler parameterSampler;
+    private final ODESolver solver;
+    private final double startTime;
+    private final double endTime;
+    private final double stepSize;
+    private final int iterations;
+    private final Map<String, Function<double[], Double>> outputAggregators;
+    private final Consumer<double[]> discreteShiftHandler;
+
+    /**
+     * Executor used for parallel Monte Carlo runs.
+     * Defaults to {@link ForkJoinPool#commonPool()} for backwards compatibility,
+     * but Spring Boot should inject a dedicated {@code ThreadPoolTaskExecutor} via
+     * {@link Builder#executorService(ExecutorService)} to avoid web-server thread starvation.
+     */
+    private final Executor executorService;
+
+    /**
+     * Immutable result of an ensemble run.
+     */
+    public static class SimulationResult {
+        /**
+         * Represents a single data point in time with quantiles.
+         */
+        public static class Point {
+            /** Time of the point */
+            public final double time;
+            /** 5th percentile value */
+            public final double p5;
+            /** Median (50th percentile) value */
+            public final double p50;
+            /** 95th percentile value */
+            public final double p95;
+
+            /**
+             * Constructs a point.
+             * @param time time
+             * @param p5 5th percentile
+             * @param p50 50th percentile
+             * @param p95 95th percentile
+             */
+            public Point(double time, double p5, double p50, double p95) {
+                this.time = time; this.p5 = p5; this.p50 = p50; this.p95 = p95;
+            }
+        }
+        
+        private final Map<String, List<Point>> outputs;
+        private final List<Map<String, Double>> sampledParameters;
+        private final List<Map<String, Double>> finalStateSummaries;
+
+        /**
+         * Constructs a simulation result.
+         * @param outputs output points
+         * @param sampledParameters parameters sampled per iteration
+         * @param finalStateSummaries summaries of final states per iteration
+         */
+        public SimulationResult(Map<String, List<Point>> outputs, 
+                                List<Map<String, Double>> sampledParameters,
+                                List<Map<String, Double>> finalStateSummaries) { 
+            this.outputs = Collections.unmodifiableMap(outputs); 
+            this.sampledParameters = Collections.unmodifiableList(sampledParameters);
+            this.finalStateSummaries = Collections.unmodifiableList(finalStateSummaries);
+        }
+
+        /**
+         * Gets all outputs.
+         * @return map of outputs
+         */
+        public Map<String, List<Point>> getOutputs() { return outputs; }
+        
+        /**
+         * Gets points for a specific output.
+         * @param outputName name of the output
+         * @return list of points
+         */
+        public List<Point> getPoints(String outputName) { return outputs.get(outputName); }
+        
+        /**
+         * Gets all sampled parameters.
+         * @return list of parameter maps
+         */
+        public List<Map<String, Double>> getSampledParameters() { return sampledParameters; }
+        
+        /**
+         * Gets all final state summaries.
+         * @return list of summary maps
+         */
+        public List<Map<String, Double>> getFinalStateSummaries() { return finalStateSummaries; }
+
+        /**
+         * Exports the simulation results to a CSV file (Task 4).
+         * @param path target file path
+         * @throws IOException if writing fails
+         */
+        public void toCSV(String path) throws IOException {
+            try (PrintWriter writer = new PrintWriter(path)) {
+                // Determine headers
+                List<String> outputNames = new ArrayList<>(outputs.keySet());
+                writer.print("Time");
+                for (String name : outputNames) {
+                    writer.print("," + name + "_p5," + name + "_p50," + name + "_p95");
+                }
+                writer.println();
+
+                // Sort time points
+                List<Double> times = outputs.get(outputNames.get(0)).stream()
+                        .map(p -> p.time).sorted().toList();
+
+                for (int i = 0; i < times.size(); i++) {
+                    writer.print(times.get(i));
+                    for (String name : outputNames) {
+                        Point p = outputs.get(name).get(i);
+                        writer.print("," + p.p5 + "," + p.p50 + "," + p.p95);
+                    }
+                    writer.println();
+                }
+            }
+        }
+    }
+
+    private MonteCarloEnsemble(Builder b) {
+        this.modelDefinition      = b.modelDefinition;
+        this.parameterSampler     = b.sampler;
+        this.solver               = b.solver;
+        this.startTime            = b.startTime;
+        this.endTime              = b.endTime;
+        this.stepSize             = b.stepSize;
+        this.iterations           = b.iterations;
+        this.outputAggregators    = Collections.unmodifiableMap(new HashMap<>(b.outputAggregators));
+        this.discreteShiftHandler = b.discreteShiftHandler;
+        this.executorService      = b.executorService != null ? b.executorService : ForkJoinPool.commonPool();
+    }
+
+    /**
+     * Runs the ensemble simulation.
+     * @return simulation result
+     */
+    @SuppressWarnings("unchecked")
+    public SimulationResult run() {
+        Map<String, ConcurrentSkipListMap<Double, TDigest>> digests = new ConcurrentHashMap<>();
+        for (String outName : outputAggregators.keySet()) {
+            digests.put(outName, new ConcurrentSkipListMap<>());
+        }
+
+        // Per-iteration storage for sensitivity analysis
+        Map<String, Double>[] sampledParams  = new Map[iterations];
+        Map<String, Double>[] finalSummaries = new Map[iterations];
+
+        // Build one CompletableFuture per iteration so simulation threads are
+        // isolated from the web-server thread pool (Flaw 3 fix).
+        List<CompletableFuture<Void>> futures = new ArrayList<>(iterations);
+        for (int i = 0; i < iterations; i++) {
+            final int iter = i;
+            futures.add(CompletableFuture.runAsync(() -> {
+                Map<String, Double> sampled = parameterSampler.sample(iter + 99991L);
+                sampledParams[iter] = sampled;
+
+                CompartmentalNetwork network = modelDefinition.bind(sampled);
+                Map<String, double[]> traj   = solveSingle(network);
+
+                // Record final state summary for sensitivity analysis
+                Map<String, Double> summary = new HashMap<>();
+                for (var entry : traj.entrySet()) {
+                    double[] values = entry.getValue();
+                    summary.put(entry.getKey(), values[values.length - 1]);
+                }
+                finalSummaries[iter] = summary;
+
+                int nSteps = traj.values().iterator().next().length;
+                for (int step = 0; step < nSteps; step++) {
+                    double t = startTime + step * stepSize;
+                    for (Map.Entry<String, double[]> e : traj.entrySet()) {
+                        TDigest d = digests.get(e.getKey())
+                                          .computeIfAbsent(t, k -> TDigest.createDigest(100.0));
+                        synchronized (d) { d.add(e.getValue()[step]); }
+                    }
+                }
+            }, executorService));
+        }
+
+        // Block until every iteration has finished
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        Map<String, List<SimulationResult.Point>> finalOutputs = new HashMap<>();
+        for (var entry : digests.entrySet()) {
+            List<SimulationResult.Point> points = new ArrayList<>();
+            for (var te : entry.getValue().entrySet()) {
+                TDigest d = te.getValue();
+                points.add(new SimulationResult.Point(
+                        te.getKey(), d.quantile(0.05), d.quantile(0.50), d.quantile(0.95)));
+            }
+            points.sort(Comparator.comparingDouble(p -> p.time));
+            finalOutputs.put(entry.getKey(), points);
+        }
+
+        return new SimulationResult(
+                finalOutputs,
+                Arrays.asList(sampledParams),
+                Arrays.asList(finalSummaries));
+    }
+
+    private Map<String, double[]> solveSingle(CompartmentalNetwork network) {
+        int nSteps = (int) Math.round((endTime - startTime) / stepSize) + 1;
+        Map<String, double[]> results = new HashMap<>();
+        for (String name : outputAggregators.keySet()) results.put(name, new double[nSteps]);
+        
+        double[] y = network.buildInitialState();
+
+        boolean hasDiscreteLogic = discreteShiftHandler != null || !network.getAdvectionChains().isEmpty();
+
+        if (hasDiscreteLogic) {
+            // Record initial state
+            for (var e : outputAggregators.entrySet()) {
+                results.get(e.getKey())[0] = e.getValue().apply(y);
+            }
+            
+            for (int step = 1; step < nSteps; step++) {
+                double tStart = startTime + (step - 1) * stepSize;
+                double tEnd = startTime + step * stepSize;
+                
+                try {
+                    solver.integrate(network, tStart, tEnd, y, null);
+                } catch (Exception e) {
+                    // handle error
+                }
+                
+                // Legacy support for user-defined handlers
+                if (discreteShiftHandler != null) {
+                    discreteShiftHandler.accept(y);
+                }
+                
+                // Native KineCore Advection processing (Upgrade 1)
+                for (CompartmentalNetwork.AdvectionChain chain : network.getAdvectionChains()) {
+                    long prevTick = (long) Math.floor(tStart / chain.shiftFrequency + 1e-9);
+                    long currTick = (long) Math.floor(tEnd / chain.shiftFrequency + 1e-9);
+                    if (currTick > prevTick) {
+                        int[] idx = chain.indices;
+                        // Save the terminal cohort BEFORE the shift so it is not
+                        // overwritten by the loop (the "Vanishing Elders" bug fix).
+                        double terminalSurvivors = chain.accumulateTerminal
+                                ? y[idx[idx.length - 1]] : 0.0;
+                        // Shift every cohort up one slot
+                        for (int i = idx.length - 1; i > 0; i--) {
+                            y[idx[i]] = y[idx[i - 1]];
+                        }
+                        // Re-add the pre-shift elders on top of the incoming cohort
+                        if (chain.accumulateTerminal) {
+                            y[idx[idx.length - 1]] += terminalSurvivors;
+                        }
+                        y[idx[0]] = 0.0;
+                    }
+                }
+                
+                for (var e : outputAggregators.entrySet()) {
+                    results.get(e.getKey())[step] = e.getValue().apply(y);
+                }
+            }
+        } else {
+            StepHandler handler = new StepHandler() {
+                double nextT = startTime;
+                int idx = 0;
+                @Override public void init(double t0, double[] y0, double t) {
+                    if (idx == 0 && nextT == startTime) {
+                        for (var e : outputAggregators.entrySet()) {
+                            results.get(e.getKey())[idx] = e.getValue().apply(y0);
+                        }
+                        nextT += stepSize;
+                        idx++;
+                    }
+                }
+                @Override public void handleStep(StepInterpolator interp, boolean isLast) {
+                    double stepEnd = interp.getCurrentTime();
+                    while (nextT <= stepEnd + 1e-12 && idx < nSteps) {
+                        interp.setInterpolatedTime(nextT);
+                        double[] state = interp.getInterpolatedState();
+                        
+                        for (var e : outputAggregators.entrySet()) {
+                            results.get(e.getKey())[idx] = e.getValue().apply(state);
+                        }
+                        nextT += stepSize;
+                        idx++;
+                    }
+                }
+            };
+
+            try {
+                solver.integrate(network, startTime, endTime, y, handler);
+            } catch (Exception e) {
+                // handle error
+            }
+        }
+        return results;
+    }
+
+    /**
+     * Builder for MonteCarloEnsemble.
+     */
+    public static class Builder {
+        private ModelDefinition modelDefinition;
+        private MonteCarloComponents.ParameterSampler sampler;
+        private ODESolver solver = new DormandPrince853Solver(1e-6, 1.0, 1e-8, 1e-8);
+        private double startTime = 0, endTime = 100, stepSize = 1;
+        private int iterations = 1000;
+        private final Map<String, Function<double[], Double>> outputAggregators = new HashMap<>();
+        private Consumer<double[]> discreteShiftHandler = null;
+
+        /**
+         * Dedicated executor for simulation threads.
+         * Defaults to {@code null} (resolved to {@link ForkJoinPool#commonPool()} at build time).
+         * Spring Boot should inject a {@code ThreadPoolTaskExecutor} bean here to keep
+         * simulation threads isolated from Tomcat request-handling threads.
+         */
+        private Executor executorService = null;
+
+        /** Constructor for the builder. */
+        public Builder() {}
+
+        /** 
+         * Sets the model definition.
+         * @param model model definition 
+         * @return this builder
+         */
+        public Builder model(ModelDefinition model) { this.modelDefinition = model; return this; }
+        
+        /** 
+         * Sets the parameter sampler.
+         * @param sampler parameter sampler 
+         * @return this builder
+         */
+        public Builder sampler(MonteCarloComponents.ParameterSampler sampler) { this.sampler = sampler; return this; }
+        
+        /** 
+         * Sets the ODE solver.
+         * @param solver ODE solver 
+         * @return this builder
+         */
+        public Builder solver(ODESolver solver) { this.solver = solver; return this; }
+        
+        /** 
+         * Sets the simulation time range.
+         * @param start start time 
+         * @param end end time 
+         * @return this builder
+         */
+        public Builder timeRange(double start, double end) { this.startTime = start; this.endTime = end; return this; }
+        
+        /** 
+         * Sets the output recording step size.
+         * @param step step size 
+         * @return this builder
+         */
+        public Builder stepSize(double step) { this.stepSize = step; return this; }
+        
+        /** 
+         * Sets the number of iterations.
+         * @param iters number of iterations 
+         * @return this builder
+         */
+        public Builder iterations(int iters) { this.iterations = iters; return this; }
+        
+        /** 
+         * Adds an output variable to track.
+         * @param name name of output 
+         * @param agg aggregator function 
+         * @return this builder
+         */
+        public Builder addOutput(String name, Function<double[], Double> agg) {
+            this.outputAggregators.put(name, agg); return this;
+        }
+
+        /** 
+         * Sets a discrete shift handler to run at each step interval.
+         * @param handler discrete shift handler
+         * @return this builder
+         */
+        public Builder discreteShift(Consumer<double[]> handler) {
+            this.discreteShiftHandler = handler; return this;
+        }
+
+        /**
+         * Sets a dedicated {@link Executor} for simulation threads.
+         *
+         * <p>In a Spring Boot context, inject your {@code @Bean("simulationExecutor")}
+         * {@code ThreadPoolTaskExecutor} here to prevent Monte Carlo runs from
+         * saturating the JVM's {@link ForkJoinPool#commonPool()} and starving
+         * Tomcat HTTP request threads.</p>
+         *
+         * <p>Example Spring Boot bean:</p>
+         * <pre>{@code
+         * @Bean("simulationExecutor")
+         * public ThreadPoolTaskExecutor simulationExecutor() {
+         *     ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
+         *     exec.setCorePoolSize(4);
+         *     exec.setMaxPoolSize(Runtime.getRuntime().availableProcessors());
+         *     exec.setQueueCapacity(256);
+         *     exec.setThreadNamePrefix("kinecore-sim-");
+         *     exec.initialize();
+         *     return exec;
+         * }
+         * }</pre>
+         *
+         * @param executor dedicated executor service
+         * @return this builder
+         */
+        public Builder executorService(Executor executor) {
+            this.executorService = executor; return this;
+        }
+
+        /** 
+         * Finalizes and builds the ensemble.
+         * @return the built ensemble 
+         */
+        public MonteCarloEnsemble build() {
+            if (modelDefinition == null || sampler == null) throw new IllegalStateException("Model and sampler must be set.");
+            if (outputAggregators.isEmpty()) outputAggregators.put("Total_Mass", state -> Arrays.stream(state).sum());
+            return new MonteCarloEnsemble(this);
+        }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\kinecore-server\src\main\java\org\kinecore\server\service\SimulationService.java ---
+package org.kinecore.server.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.kinecore.engine.ModelDefinition;
+import org.kinecore.serialization.ModelLoader;
+import org.kinecore.solver.MonteCarloEnsemble;
+import org.kinecore.server.domain.JobStatus;
+import org.kinecore.server.domain.SimulationJob;
+import org.kinecore.server.repository.SimulationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+/**
+ * Orchestrates simulation runs and interacts with the KineCore Engine.
+ */
+@Service
+public class SimulationService {
+
+    private static final Logger log = LoggerFactory.getLogger(SimulationService.class);
+
+    private final SimulationRepository repository;
+    private final ObjectMapper objectMapper;
+
+    public SimulationService(SimulationRepository repository, ObjectMapper objectMapper) {
+        this.repository = repository;
+        this.objectMapper = objectMapper;
+    }
+
+    /**
+     * Submits a new simulation job to the queue.
+     * @param modelName name of the model
+     * @param jsonDefinition model definition in JSON
+     * @return the created job
+     */
+    public SimulationJob submitJob(String modelName, String jsonDefinition) {
+        SimulationJob job = SimulationJob.builder()
+                .modelName(modelName)
+                .modelDefinitionJson(jsonDefinition)
+                .status(JobStatus.PENDING)
+                .startTime(LocalDateTime.now())
+                .build();
+        
+        job = repository.save(job);
+        
+        // Trigger async execution
+        executeJob(job.getId());
+        
+        return job;
+    }
+
+    /**
+     * Asynchronously executes the simulation.
+     * @param jobId ID of the job to run
+     */
+    @Async
+    public void executeJob(String jobId) {
+        SimulationJob job = repository.findById(jobId).orElseThrow();
+        
+        try {
+            job.setStatus(JobStatus.RUNNING);
+            repository.save(job);
+
+            // 1. Load Model from JSON (using KineCore Engine)
+            ModelDefinition model = ModelLoader.fromJson(job.getModelDefinitionJson());
+
+            // 2. Configure Ensemble (Standard defaults for now)
+            MonteCarloEnsemble ensemble = new MonteCarloEnsemble.Builder()
+                    .model(model)
+                    .sampler(seed -> java.util.Map.of()) // Simplified for now
+                    .timeRange(0, 100)
+                    .iterations(1000)
+                    .build();
+
+            // 3. Run Simulation
+            MonteCarloEnsemble.SimulationResult result = ensemble.run();
+
+            // 4. Save Results
+            job.setResultJson(objectMapper.writeValueAsString(result));
+            job.setStatus(JobStatus.COMPLETED);
+            job.setEndTime(LocalDateTime.now());
+            job.setProgress(100);
+            
+        } catch (Exception e) {
+            log.error("Simulation failed for job {}: {}", jobId, e.getMessage());
+            job.setStatus(JobStatus.FAILED);
+            job.setErrorMessage(e.getMessage());
+        } finally {
+            repository.save(job);
+        }
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\feedback\LinearScaleFeedback.java ---
+package org.kinecore.engine.feedback;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.kinecore.engine.FeedbackOperator;
+
+import java.util.Map;
+
+/**
+ * A feedback operator that multiplies a flow rate by a fixed scalar.
+ *
+ * <p>Useful for policy interventions (e.g., a 30% reduction in emigration rate)
+ * that can be toggled on or off by changing a single parameter in a What-If scenario.</p>
+ *
+ * <p>JSON example:
+ * <pre>{ "type": "linearScale", "scalar": 0.70 }</pre>
+ * </p>
+ */
+public class LinearScaleFeedback implements FeedbackOperator {
+
+    /** Multiplier applied to the incoming flow rate. */
+    private final double scalar;
+
+    /** No-arg constructor for Jackson. */
+    public LinearScaleFeedback() { this.scalar = 1.0; }
+
+    /**
+     * Constructs a LinearScaleFeedback.
+     * @param scalar multiplier to apply
+     */
+    @JsonCreator
+    public LinearScaleFeedback(@JsonProperty("scalar") double scalar) {
+        this.scalar = scalar;
+    }
+
+    /**
+     * Gets the scalar multiplier applied to the incoming flow rate.
+     * @return the scalar multiplier
+     */
+    public double getScalar() { return scalar; }
+
+    @Override
+    public double apply(double t, double currentFlow, double[] state, Map<String, Double> params) {
+        return currentFlow * scalar;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\feedback\LogisticFeedback.java ---
+package org.kinecore.engine.feedback;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.kinecore.engine.FeedbackOperator;
+
+import java.util.Map;
+
+/**
+ * A feedback operator that scales a flow rate by a generalised logistic (sigmoid)
+ * function evaluated on a chosen compartment index.
+ *
+ * <p>The multiplier ranges from {@code baseValue} (when stress is far below
+ * the midpoint) to {@code maxValue} (when stress is far above the midpoint):
+ * <pre>
+ *   multiplier = baseValue + (maxValue - baseValue)
+ *                            / (1 + exp(-steepness * (state[stateIndex] - midpoint)))
+ * </pre>
+ * This mirrors the full behaviour of
+ * {@link org.kinecore.engine.FeedbackFactory.LogisticCurveBuilder}, ensuring the
+ * Java API and the JSON REST API have identical expressive power.</p>
+ *
+ * <p>JSON example (Youth-Flight: 1x baseline, up to 5x at extreme stress):
+ * <pre>
+ * {
+ *   "type"       : "logistic",
+ *   "stateIndex" : 3,
+ *   "midpoint"   : 500000.0,
+ *   "steepness"  : 0.00001,
+ *   "baseValue"  : 1.0,
+ *   "maxValue"   : 5.0
+ * }
+ * </pre>
+ * </p>
+ *
+ * <p>Omitting {@code baseValue} / {@code maxValue} from JSON defaults to the
+ * classic 0-to-1 sigmoid (backwards-compatible with v1.0.3 payloads).</p>
+ */
+public class LogisticFeedback implements FeedbackOperator {
+
+    /** Index of the state variable that drives the logistic curve. */
+    private final int    stateIndex;
+
+    /** Value of the state variable at which the multiplier is halfway between base and max. */
+    private final double midpoint;
+
+    /** Steepness (growth rate) of the sigmoid curve. */
+    private final double steepness;
+
+    /**
+     * Minimum multiplier applied when the driving variable is far below the midpoint.
+     * Defaults to {@code 0.0} (classic sigmoid lower bound).
+     */
+    private final double baseValue;
+
+    /**
+     * Maximum multiplier approached when the driving variable is far above the midpoint.
+     * Defaults to {@code 1.0} (classic sigmoid upper bound).
+     */
+    private final double maxValue;
+
+    /**
+     * No-arg constructor for Jackson.
+     * Defaults reproduce the classic 0-to-1 sigmoid for backwards compatibility.
+     */
+    public LogisticFeedback() {
+        this.stateIndex = 0;
+        this.midpoint   = 0;
+        this.steepness  = 1;
+        this.baseValue  = 0.0;
+        this.maxValue   = 1.0;
+    }
+
+    /**
+     * Constructs a LogisticFeedback with full generalised-sigmoid parameters.
+     *
+     * @param stateIndex index of the driving state variable in the system state vector
+     * @param midpoint   state value at which the multiplier is halfway between base and max
+     * @param steepness  steepness of the transition (higher = sharper threshold)
+     * @param baseValue  minimum multiplier (typically 1.0 for a pass-through baseline)
+     * @param maxValue   maximum multiplier (e.g., 5.0 to model 5x amplification at peak stress)
+     */
+    @JsonCreator
+    public LogisticFeedback(@JsonProperty("stateIndex") int    stateIndex,
+                             @JsonProperty("midpoint")   double midpoint,
+                             @JsonProperty("steepness")  double steepness,
+                             @JsonProperty(value = "baseValue", defaultValue = "0.0") double baseValue,
+                             @JsonProperty(value = "maxValue",  defaultValue = "1.0") double maxValue) {
+        this.stateIndex = stateIndex;
+        this.midpoint   = midpoint;
+        this.steepness  = steepness;
+        this.baseValue  = baseValue;
+        this.maxValue   = maxValue;
+    }
+
+    /**
+     * Gets the index of the state variable driving the logistic curve.
+     * @return state index
+     */
+    public int    getStateIndex() { return stateIndex; }
+
+    /**
+     * Gets the midpoint of the sigmoid (state value at which multiplier is halfway between base and max).
+     * @return midpoint
+     */
+    public double getMidpoint()   { return midpoint; }
+
+    /**
+     * Gets the steepness (growth rate) of the sigmoid curve.
+     * @return steepness
+     */
+    public double getSteepness()  { return steepness; }
+
+    /**
+     * Gets the minimum multiplier (lower asymptote of the sigmoid).
+     * @return base multiplier value
+     */
+    public double getBaseValue()  { return baseValue; }
+
+    /**
+     * Gets the maximum multiplier (upper asymptote of the sigmoid).
+     * @return max multiplier value
+     */
+    public double getMaxValue()   { return maxValue; }
+
+    @Override
+    public double apply(double t, double currentFlow, double[] state, Map<String, Double> params) {
+        double x          = (stateIndex >= 0 && stateIndex < state.length) ? state[stateIndex] : 0.0;
+        double sigmoid    = 1.0 / (1.0 + Math.exp(-steepness * (x - midpoint)));
+        double multiplier = baseValue + (maxValue - baseValue) * sigmoid;
+        return currentFlow * multiplier;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\FeedbackOperator.java ---
+package org.kinecore.engine;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.kinecore.engine.feedback.LinearScaleFeedback;
+import org.kinecore.engine.feedback.LogisticFeedback;
+
+import java.util.Map;
+
+/**
+ * A non-linear feedback that can be applied to specific fluxes or sources.
+ *
+ * <p>This interface is polymorphically deserializable by Jackson via the {@code "type"}
+ * discriminator field, allowing REST clients (e.g., the KineCore dashboard) to submit
+ * feedback functions over a JSON API.</p>
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = LogisticFeedback.class,    name = "logistic"),
+    @JsonSubTypes.Type(value = LinearScaleFeedback.class, name = "linearScale")
+})
+@FunctionalInterface
+public interface FeedbackOperator {
+
+    /**
+     * Applies a transformation to a flow rate or source/sink value.
+     *
+     * @param t            current simulation time
+     * @param currentFlow  the original flow rate (before this feedback is applied)
+     * @param state        full system state vector (read-only)
+     * @param params       parameters from the current simulation environment
+     * @return             modified flow rate (must be ≥ 0)
+     */
+    double apply(double t, double currentFlow, double[] state, Map<String, Double> params);
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\flux\ConstantRateFlux.java ---
+package org.kinecore.engine.flux;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.kinecore.engine.Flux;
+
+import java.util.Map;
+
+/**
+ * A flux whose rate is a fixed proportion of the source compartment value.
+ *
+ * <p>Flow = {@code fromValue * rate}, where {@code rate} is constant per unit time.</p>
+ *
+ * <p>JSON example:
+ * <pre>{ "type": "constant", "rate": 0.15 }</pre>
+ * </p>
+ */
+public class ConstantRateFlux implements Flux {
+
+    /** Proportional transfer rate per unit time. */
+    private final double rate;
+
+    /** No-arg constructor for Jackson. */
+    public ConstantRateFlux() { this.rate = 0.0; }
+
+    /**
+     * Constructs a ConstantRateFlux.
+     * @param rate proportional rate per unit time
+     */
+    @JsonCreator
+    public ConstantRateFlux(@JsonProperty("rate") double rate) {
+        this.rate = rate;
+    }
+
+    /**
+     * Gets the rate.
+     * @return the proportional rate
+     */
+    public double getRate() { return rate; }
+
+    @Override
+    public double getFlowRate(double t, double fromValue, double[] state, Map<String, Double> params) {
+        return fromValue * rate;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\flux\MassActionFlux.java ---
+package org.kinecore.engine.flux;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.kinecore.engine.Flux;
+
+import java.util.Map;
+
+/**
+ * A flux driven by mass-action kinetics: flow = rate × fromValue × state[interactorIndex].
+ *
+ * <p>Useful for modelling contagion, predator–prey, or bimolecular reactions where
+ * the transfer rate is proportional to both the source and an interacting compartment.</p>
+ *
+ * <p>JSON example:
+ * <pre>{ "type": "massAction", "rate": 0.3, "interactorIndex": 2 }</pre>
+ * </p>
+ */
+public class MassActionFlux implements Flux {
+
+    /** Reaction rate constant. */
+    private final double rate;
+
+    /**
+     * Index of the interactor compartment in the state vector.
+     * Set to -1 to use only the source value (degrades to first-order kinetics).
+     */
+    private final int interactorIndex;
+
+    /** No-arg constructor for Jackson. */
+    public MassActionFlux() { this.rate = 0.0; this.interactorIndex = -1; }
+
+    /**
+     * Constructs a MassActionFlux.
+     * @param rate            rate constant
+     * @param interactorIndex state-vector index of the interacting compartment
+     */
+    @JsonCreator
+    public MassActionFlux(@JsonProperty("rate") double rate,
+                          @JsonProperty("interactorIndex") int interactorIndex) {
+        this.rate             = rate;
+        this.interactorIndex  = interactorIndex;
+    }
+
+    /**
+     * Gets the reaction rate constant.
+     * @return rate constant
+     */
+    public double getRate()           { return rate; }
+
+    /**
+     * Gets the index of the interacting compartment in the state vector.
+     * @return interactor compartment index, or -1 for first-order kinetics
+     */
+    public int getInteractorIndex()   { return interactorIndex; }
+
+    @Override
+    public double getFlowRate(double t, double fromValue, double[] state, Map<String, Double> params) {
+        double interactor = (interactorIndex >= 0 && interactorIndex < state.length)
+                ? state[interactorIndex] : 1.0;
+        return rate * fromValue * interactor;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\flux\ParameterDrivenFlux.java ---
+package org.kinecore.engine.flux;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.kinecore.engine.Flux;
+
+import java.util.Map;
+
+/**
+ * A flux whose rate is read from the simulation parameter map at runtime.
+ *
+ * <p>This is the preferred flux type for Monte Carlo simulations: the actual rate
+ * value is injected by the {@link org.kinecore.solver.MonteCarloComponents.ParameterSampler}
+ * into the {@code params} map at each iteration, enabling full uncertainty quantification.</p>
+ *
+ * <p>JSON example:
+ * <pre>{ "type": "paramDriven", "paramKey": "beta", "fallbackRate": 0.1 }</pre>
+ * </p>
+ */
+public class ParameterDrivenFlux implements Flux {
+
+    /** Key to look up in the simulation params map. */
+    private final String paramKey;
+
+    /** Fallback rate used when the key is absent from the params map. */
+    private final double fallbackRate;
+
+    /** No-arg constructor for Jackson. */
+    public ParameterDrivenFlux() { this.paramKey = ""; this.fallbackRate = 0.0; }
+
+    /**
+     * Constructs a ParameterDrivenFlux.
+     * @param paramKey     key to look up in the params map
+     * @param fallbackRate rate used when the key is not present
+     */
+    @JsonCreator
+    public ParameterDrivenFlux(@JsonProperty("paramKey") String paramKey,
+                                @JsonProperty("fallbackRate") double fallbackRate) {
+        this.paramKey     = paramKey;
+        this.fallbackRate = fallbackRate;
+    }
+
+    /**
+     * Gets the parameter key used for rate lookup.
+     * @return param key
+     */
+    public String getParamKey()    { return paramKey; }
+
+    /**
+     * Gets the fallback rate used when the param key is absent.
+     * @return fallback rate
+     */
+    public double getFallbackRate() { return fallbackRate; }
+
+    @Override
+    public double getFlowRate(double t, double fromValue, double[] state, Map<String, Double> params) {
+        double rate = params.getOrDefault(paramKey, fallbackRate);
+        return fromValue * rate;
+    }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\Flux.java ---
+package org.kinecore.engine;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.kinecore.engine.flux.ConstantRateFlux;
+import org.kinecore.engine.flux.MassActionFlux;
+import org.kinecore.engine.flux.ParameterDrivenFlux;
+
+import java.util.Map;
+
+/**
+ * A directed flow of mass from one compartment to another.
+ *
+ * <p>This interface is polymorphically deserializable by Jackson via the {@code "type"}
+ * discriminator field, allowing REST clients (e.g., the KineCore dashboard) to submit
+ * model definitions over a JSON API.</p>
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = ConstantRateFlux.class,       name = "constant"),
+    @JsonSubTypes.Type(value = MassActionFlux.class,         name = "massAction"),
+    @JsonSubTypes.Type(value = ParameterDrivenFlux.class,    name = "paramDriven")
+})
+@FunctionalInterface
+public interface Flux {
+
+    /**
+     * Computes the flow rate from the source compartment at time {@code t}.
+     *
+     * @param t         current simulation time
+     * @param fromValue current amount in the source compartment ({@code state[fromIdx]})
+     * @param state     full system state vector (read-only)
+     * @param params    parameters from the current simulation environment (e.g., Monte Carlo)
+     * @return          amount transferred per unit time (must be ≥ 0)
+     */
+    double getFlowRate(double t, double fromValue, double[] state, Map<String, Double> params);
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\source\AggregatedSource.java ---
+package org.kinecore.engine.source;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.kinecore.engine.SourceSink;
+
+import java.util.Map;
+
+/**
+ * A Source/Sink that calculates flow based on a weighted sum of multiple compartments.
+ * 
+ * <p>Crucial for demographic modeling (e.g., Births = sum of fertile age cohorts
+ * multiplied by their respective age-specific fertility rates).</p>
+ */
+public class AggregatedSource implements SourceSink {
+
+    private final int[] sourceIndices;
+    private final double[] weights;
+    private final double scale;
+
+    /**
+     * Constructs an AggregatedSource.
+     * 
+     * @param sourceIndices indices of the compartments to sum
+     * @param weights       multipliers for each compartment (must match length of indices)
+     * @param scale         global multiplier (e.g., overall fertility scalar)
+     */
+    @JsonCreator
+    public AggregatedSource(@JsonProperty("sourceIndices") int[] sourceIndices,
+                            @JsonProperty("weights")       double[] weights,
+                            @JsonProperty("scale")         double scale) {
+        if (sourceIndices.length != weights.length) {
+            throw new IllegalArgumentException("Indices and weights must have identical length");
+        }
+        this.sourceIndices = sourceIndices;
+        this.weights = weights;
+        this.scale = scale;
+    }
+
+    @Override
+    public double getNetFlow(double t, double[] state, Map<String, Double> params) {
+        double sum = 0;
+        for (int i = 0; i < sourceIndices.length; i++) {
+            sum += state[sourceIndices[i]] * weights[i];
+        }
+        return sum * scale;
+    }
+
+    @JsonProperty("sourceIndices")
+    public int[] getSourceIndices() { return sourceIndices; }
+
+    @JsonProperty("weights")
+    public double[] getWeights() { return weights; }
+
+    @JsonProperty("scale")
+    public double getScale() { return scale; }
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\SourceSink.java ---
+package org.kinecore.engine;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.kinecore.engine.stochastic.GaussianNoiseSource;
+import org.kinecore.engine.source.AggregatedSource;
+
+import java.util.Map;
+
+/**
+ * An external inflow (source) or outflow (sink) applied to a specific compartment.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = GaussianNoiseSource.class, name = "gaussianNoise"),
+    @JsonSubTypes.Type(value = AggregatedSource.class,    name = "aggregatedSource")
+})
+@FunctionalInterface
+public interface SourceSink {
+
+    /**
+     * Computes the net addition to the compartment at time {@code t}.
+     *
+     * @param t        current simulation time
+     * @param state    full system state vector (read-only)
+     * @param params   parameters from the current simulation environment (e.g., Monte Carlo)
+     * @return         net addition per unit time (positive = source, negative = sink)
+     */
+    double getNetFlow(double t, double[] state, Map<String, Double> params);
+}
+
+
+--- FILE: C:\Users\JISHNU B R\Git projects\KineCore\src\main\java\org\kinecore\engine\stochastic\GaussianNoiseSource.java ---
+package org.kinecore.engine.stochastic;
+
+import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
+import org.apache.commons.math3.random.MersenneTwister;
+import org.kinecore.engine.SourceSink;
+
+import java.util.Map;
+
+/**
+ * A {@link SourceSink} that injects continuous stochastic shocks into a compartment,
+ * modelling aleatoric uncertainty such as economic recessions or pandemic waves.
+ *
+ * <h2>Adaptive-Solver Compatibility</h2>
+ * <p>Adaptive Runge-Kutta solvers (e.g., Dormand-Prince 8(5,3)) call
+ * {@code computeDerivatives} 6–13 times per step at slightly different micro-time
+ * points to estimate the local truncation error. If the noise function returns a
+ * freshly-drawn, uncorrelated random number on every call, the error estimate will
+ * see a wildly discontinuous derivative, force the step size toward machine epsilon
+ * ({@code ~1e-15}), and the simulation will freeze at {@code t ≈ 0}.</p>
+ *
+ * <p>This class avoids that trap by pre-computing a deterministic set of shock
+ * values at fixed {@code interval}-spaced knots and linearly interpolating between
+ * them. The resulting piecewise-linear curve is Lipschitz-continuous, so the
+ * adaptive solver sees a smooth derivative between knots and progresses correctly.</p>
+ *
+ * <h2>Reproducibility</h2>
+ * <p>Each instance owns a private {@link MersenneTwister} seeded from the caller's
+ * {@code seed} argument. Seeding with {@code iterationIndex * 31L + compartmentIndex}
+ * ensures independent, reproducible noise paths across Monte Carlo iterations without
+ * any shared state or synchronisation overhead.</p>
+ *
+ * <h2>SDE Scaling</h2>
+ * <p>For an Itô SDE with diffusion coefficient σ and shock interval Δt, set
+ * {@code stdDev = σ * Math.sqrt(interval)} to reproduce the correct Brownian
+ * variance over each interval.</p>
+ *
+ * <h2>Usage example</h2>
+ * <pre>{@code
+ * // Per-compartment, per-iteration — thread-safe, no sharing required
+ * long seed = (long) iter * 31L + compartmentIndex;
+ * SourceSink noise = new GaussianNoiseSource(
+ *     0.0,          // zero-mean
+ *     sigma * Math.sqrt(1.0),  // yearly interval
+ *     seed, tStart, tEnd, 1.0  // annual knots
+ * );
+ * builder.addSource("Population", noise);
+ * }</pre>
+ */
+public class GaussianNoiseSource implements SourceSink {
+
+    /**
+     * Pre-computed piecewise-linear noise spline.
+     * Evaluated at query time {@code t} to return a Lipschitz-continuous value
+     * that the adaptive solver can treat as a smooth signal.
+     */
+    private final PolynomialSplineFunction noiseSpline;
+
+    /** Lower bound of the time domain covered by the spline. */
+    private final double tStart;
+
+    /** Upper bound of the time domain covered by the spline. */
+    private final double tEnd;
+
+    /**
+     * Constructs a {@code GaussianNoiseSource} by pre-computing a linear noise spline.
+     *
+     * @param mean     mean of each Gaussian knot value (typically 0.0 for zero-mean noise)
+     * @param stdDev   standard deviation of each knot; set to {@code σ * sqrt(interval)}
+     *                 to match Itô-Euler Brownian variance
+     * @param seed     deterministic PRNG seed — combine Monte Carlo iteration index and
+     *                 compartment index to guarantee independent, reproducible paths
+     * @param tStart   simulation start time (must match the ODE solver's start time)
+     * @param tEnd     simulation end time (must match the ODE solver's end time)
+     * @param interval spacing between noise knots in simulation-time units (e.g., 1.0 for
+     *                 annual shocks in a yearly demographic model)
+     */
+    public GaussianNoiseSource(double mean, double stdDev, long seed,
+                                double tStart, double tEnd, double interval) {
+        this.tStart = tStart;
+        this.tEnd   = tEnd;
+
+        MersenneTwister rng = new MersenneTwister(seed);
+
+        // Build evenly-spaced knot arrays
+        int steps = (int) Math.ceil((tEnd - tStart) / interval) + 1;
+        double[] t = new double[steps];
+        double[] v = new double[steps];
+
+        for (int i = 0; i < steps; i++) {
+            t[i] = tStart + i * interval;
+            v[i] = mean + stdDev * rng.nextGaussian();
+        }
+
+        // Ensure the last knot exactly covers tEnd (avoids out-of-range evaluation)
+        t[steps - 1] = Math.max(t[steps - 1], tEnd);
+
+        this.noiseSpline = new LinearInterpolator().interpolate(t, v);
+    }
+
+    /**
+     * Returns the mean of the Gaussian distribution used at each knot.
+     *
+     * @return the mean shock value
+     */
+    public double getMean() {
+        // Extracting exact mean from spline coefficients is non-trivial; expose
+        // via constructor parameter storage if needed. Provided for API symmetry.
+        return noiseSpline.value((tStart + tEnd) / 2.0);
+    }
+
+    /**
+     * Evaluates the pre-computed noise spline at time {@code t}, returning a
+     * Lipschitz-continuous shock value safe for adaptive ODE solvers.
+     *
+     * <p>If {@code t} falls outside {@code [tStart, tEnd]}, the nearest knot
+     * value is returned (flat extrapolation) rather than throwing an exception,
+     * to ensure numerical robustness at integration boundaries.</p>
+     *
+     * @param t      current simulation time
+     * @param state  full system state vector (not used; noise is state-independent)
+     * @param params simulation parameter map (not used; noise uses pre-computed knots)
+     * @return       interpolated shock value at time {@code t}
+     */
+    @Override
+    public double getNetFlow(double t, double[] state, Map<String, Double> params) {
+        // Clamp to the spline domain to prevent out-of-range exceptions at
+        // the adaptive solver's boundary-probing micro-steps
+        double tClamped = Math.max(tStart, Math.min(tEnd, t));
+        return noiseSpline.value(tClamped);
+    }
+}
+

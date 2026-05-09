@@ -1,10 +1,20 @@
 package org.kinecore.engine;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.kinecore.engine.stochastic.GaussianNoiseSource;
+import org.kinecore.engine.source.AggregatedSource;
+
 import java.util.Map;
 
 /**
  * An external inflow (source) or outflow (sink) applied to a specific compartment.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = GaussianNoiseSource.class, name = "gaussianNoise"),
+    @JsonSubTypes.Type(value = AggregatedSource.class,    name = "aggregatedSource")
+})
 @FunctionalInterface
 public interface SourceSink {
 

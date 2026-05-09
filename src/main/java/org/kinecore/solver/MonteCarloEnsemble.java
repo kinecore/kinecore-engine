@@ -70,6 +70,7 @@ public class MonteCarloEnsemble {
         private final Map<String, List<Point>> outputs;
         private final List<Map<String, Double>> sampledParameters;
         private final List<Map<String, Double>> finalStateSummaries;
+        private String sensitivityMethod = "Spearman"; // Default method used by SensitivityEngine
 
         /**
          * Constructs a simulation result.
@@ -84,6 +85,22 @@ public class MonteCarloEnsemble {
             this.sampledParameters = Collections.unmodifiableList(sampledParameters);
             this.finalStateSummaries = Collections.unmodifiableList(finalStateSummaries);
         }
+
+        /**
+         * Sets the method used for sensitivity analysis.
+         * @param method the method name (e.g., "Pearson", "Spearman")
+         * @return this result
+         */
+        public SimulationResult withSensitivityMethod(String method) {
+            this.sensitivityMethod = method;
+            return this;
+        }
+
+        /**
+         * Gets the sensitivity method used.
+         * @return the method name
+         */
+        public String getSensitivityMethod() { return sensitivityMethod; }
 
         /**
          * Gets all outputs.

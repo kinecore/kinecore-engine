@@ -7,40 +7,42 @@ import org.kinecore.engine.FeedbackOperator;
 import java.util.Map;
 
 /**
- * A feedback operator that multiplies a flow rate by a fixed scalar.
- *
- * <p>Useful for policy interventions (e.g., a 30% reduction in emigration rate)
- * that can be toggled on or off by changing a single parameter in a What-If scenario.</p>
- *
- * <p>JSON example:
- * <pre>{ "type": "linearScale", "scalar": 0.70 }</pre>
- * </p>
+ * A simple linear multiplier applied to a flow.
+ * 
+ * <p>Supports parameterized scaling via {@code scalarParamKey}, allowing feedback
+ * intensity to be driven by Monte Carlo samplers.</p>
  */
 public class LinearScaleFeedback implements FeedbackOperator {
 
-    /** Multiplier applied to the incoming flow rate. */
     private final double scalar;
+    private final String scalarParamKey;
 
-    /** No-arg constructor for Jackson. */
-    public LinearScaleFeedback() { this.scalar = 1.0; }
-
-    /**
-     * Constructs a LinearScaleFeedback.
-     * @param scalar multiplier to apply
-     */
-    @JsonCreator
-    public LinearScaleFeedback(@JsonProperty("scalar") double scalar) {
-        this.scalar = scalar;
+    public LinearScaleFeedback(double scalar) {
+        this(scalar, null);
     }
 
-    /**
-     * Gets the scalar multiplier applied to the incoming flow rate.
-     * @return the scalar multiplier
-     */
-    public double getScalar() { return scalar; }
+    @JsonCreator
+    public LinearScaleFeedback(@JsonProperty("scalar")         double scalar,
+                               @JsonProperty("scalarParamKey") String scalarParamKey) {
+        this.scalar = scalar;
+        this.scalarParamKey = scalarParamKey;
+    }
 
     @Override
     public double apply(double t, double currentFlow, double[] state, Map<String, Double> params) {
-        return currentFlow * scalar;
+        double currentScalar = (scalarParamKey != null && !scalarParamKey.isEmpty())
+                ? params.getOrDefault(scalarParamKey, scalar)
+                : scalar;
+        return currentFlow * currentScalar;
+    }
+
+    @JsonProperty("scalar")
+    public double getScalar() {
+        return scalar;
+    }
+
+    @JsonProperty("scalarParamKey")
+    public String getScalarParamKey() {
+        return scalarParamKey;
     }
 }

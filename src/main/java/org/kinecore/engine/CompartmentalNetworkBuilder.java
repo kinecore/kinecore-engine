@@ -237,26 +237,36 @@ public class CompartmentalNetworkBuilder {
      * Finalizes the model definition.
      * @return the stateless model definition
      */
-    public ModelDefinition buildDefinition() {
+    public Model build() {
         if (compartments.isEmpty()) throw new IllegalStateException("No compartments defined.");
-        List<Compartment> compsSnapshot = new ArrayList<>(compartments);
-        List<CompartmentalNetwork.IndexedFlux> fluxesSnapshot = new ArrayList<>(fluxes);
-        List<CompartmentalNetwork.IndexedSourceSink> sourcesSnapshot = new ArrayList<>(sources);
-        List<FeedbackOperator> globalsSnapshot = new ArrayList<>(globalFeedbacks);
-        List<CompartmentalNetwork.AdvectionChain> chainsSnapshot = new ArrayList<>(advectionChains);
-        Map<String, ExogenousSignal> signalsSnapshot = new HashMap<>(exogenousSignals);
-        boolean clamp = this.clampAtZero;
+        
+        List<Model.IndexedFluxDef> fluxDefs = new ArrayList<>();
+        for (CompartmentalNetwork.IndexedFlux f : fluxes) {
+            fluxDefs.add(new Model.IndexedFluxDef(f.fromIdx, f.toIdx, f.flux, f.localFeedbacks));
+        }
 
-        return params -> new CompartmentalNetwork(
-                compsSnapshot,
-                fluxesSnapshot,
-                sourcesSnapshot,
-                globalsSnapshot,
-                chainsSnapshot,
-                signalsSnapshot,
-                params,
-                clamp
+        List<Model.IndexedSourceSinkDef> sourceDefs = new ArrayList<>();
+        for (CompartmentalNetwork.IndexedSourceSink s : sources) {
+            sourceDefs.add(new Model.IndexedSourceSinkDef(s.idx, s.sourceSink, s.localFeedbacks));
+        }
+
+        return new Model(
+                new ArrayList<>(compartments),
+                fluxDefs,
+                sourceDefs,
+                new ArrayList<>(globalFeedbacks),
+                new ArrayList<>(advectionChains),
+                new HashMap<>(exogenousSignals),
+                this.clampAtZero
         );
+    }
+
+    /**
+     * @deprecated Use {@link #build()} instead to get a serializable Model.
+     */
+    @Deprecated
+    public ModelDefinition buildDefinition() {
+        return build();
     }
 
     private int requireCompartmentIndex(String name) {

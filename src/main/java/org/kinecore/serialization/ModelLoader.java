@@ -1,122 +1,60 @@
 package org.kinecore.serialization;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.kinecore.engine.CompartmentalNetworkBuilder;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.kinecore.engine.Model;
 import org.kinecore.engine.ModelDefinition;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
- * Loads model definitions from JSON (Patch 4).
+ * Enterprise-grade loader for System Dynamics models.
+ * 
+ * <p>Leverages Jackson's polymorphic deserialization to inflate complex model
+ * structures (including non-linear feedbacks and stochastic sources) directly
+ * from JSON payloads submitted by the React dashboard.</p>
  */
 public class ModelLoader {
 
-    /** Constructor */
-    public ModelLoader() {}
+    private final ObjectMapper mapper;
 
-    /**
-     * DTO for the full model.
-     */
-    public static class JsonModel {
-        /** List of compartments */
-        public List<JsonCompartment> compartments;
-        /** List of fluxes */
-        public List<JsonFlux> fluxes;
-        /** List of sources/sinks */
-        public List<JsonSourceSink> sources;
-        /** Map of named feedbacks */
-        public Map<String, JsonFeedback> feedbacks;
-
-        /** Constructor */
-        public JsonModel() {}
+    public ModelLoader() {
+        this.mapper = new ObjectMapper();
+        this.mapper.registerModule(new JavaTimeModule());
+        this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
 
     /**
-     * DTO for a compartment.
+     * Deserializes a model from JSON.
+     * 
+     * @param json model structure JSON
+     * @return a concrete Model instance that implements ModelDefinition
+     * @throws IOException if the JSON is malformed or types are missing
      */
-    public static class JsonCompartment {
-        /** Name of the compartment */
-        public String name;
-        /** Initial value */
-        public double initialValue;
-
-        /** Constructor */
-        public JsonCompartment() {}
+    public Model load(String json) throws IOException {
+        return mapper.readValue(json, Model.class);
     }
 
     /**
-     * DTO for a flux.
+     * Serializes a model to JSON.
+     * 
+     * @param model the model to save
+     * @return JSON string representation
+     * @throws IOException if serialization fails
      */
-    public static class JsonFlux {
-        /** From, To, and Type */
-        public String from, to, type;
-        /** Base rate */
-        public double rate;
-        /** List of selective feedbacks */
-        @JsonProperty("feedbacks")
-        public List<String> feedbackNames;
-
-        /** Constructor */
-        public JsonFlux() {}
+    public String save(Model model) throws IOException {
+        return mapper.writeValueAsString(model);
     }
 
     /**
-     * DTO for a source/sink.
-     */
-    public static class JsonSourceSink {
-        /** Target compartment and Type */
-        public String compartment, type;
-        /** Base rate */
-        public double rate;
-        /** List of selective feedbacks */
-        @JsonProperty("feedbacks")
-        public List<String> feedbackNames;
-
-        /** Constructor */
-        public JsonSourceSink() {}
-    }
-
-    /**
-     * DTO for a feedback operator.
-     */
-    public static class JsonFeedback {
-        /** Type of feedback */
-        public String type;
-        /** Parameters for the feedback */
-        public Map<String, Double> params;
-
-        /** Constructor */
-        public JsonFeedback() {}
-    }
-
-    /**
-     * Loads a model from a JSON string.
+     * Static convenience method for quick loading.
+     * 
      * @param json the JSON content
      * @return a ModelDefinition
      * @throws IOException if parsing fails
      */
     public static ModelDefinition fromJson(String json) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonModel model = mapper.readValue(json, JsonModel.class);
-        
-        CompartmentalNetworkBuilder builder = new CompartmentalNetworkBuilder();
-        
-        for (JsonCompartment c : model.compartments) {
-            builder.addCompartment(c.name, c.initialValue);
-        }
-        
-        // This is a simplified mapper. In a real system, you'd have a registry
-        // of Flux/SourceSink/Feedback types.
-        for (JsonFlux f : model.fluxes) {
-            builder.addConstantRateFlux(f.from, f.to, f.rate, 
-                f.feedbackNames != null ? f.feedbackNames.toArray(new String[0]) : null);
-        }
-        
-        // ... similar logic for sources and feedbacks would be implemented here
-        
-        return builder.buildDefinition();
+        return new ModelLoader().load(json);
     }
 }

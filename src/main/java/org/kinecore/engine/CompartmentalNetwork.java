@@ -27,7 +27,11 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
         public final int[] indices;
         public boolean accumulateTerminal;
         public double shiftFrequency;
-        public AdvectionChain(int[] indices, boolean acc, double freq) {
+
+        @com.fasterxml.jackson.annotation.JsonCreator
+        public AdvectionChain(@com.fasterxml.jackson.annotation.JsonProperty("indices") int[] indices, 
+                              @com.fasterxml.jackson.annotation.JsonProperty("accumulateTerminal") boolean acc, 
+                              @com.fasterxml.jackson.annotation.JsonProperty("shiftFrequency") double freq) {
             this.indices = indices;
             this.accumulateTerminal = acc;
             this.shiftFrequency = freq;
@@ -112,16 +116,13 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
             }
             if (flow < 0.0) flow = 0.0;
 
+            // Soft Boundary Handling (Upgrade 3)
             Compartment source = compartments.get(f.fromIdx);
-            if (clampAtZero && y[f.fromIdx] <= 1e-12) {
-                flow = 0.0;
-            } else if (y[f.fromIdx] <= source.getMin() + 1e-12) {
-                flow = 0.0;
-            }
+            double sourceMin = clampAtZero ? Math.max(0.0, source.getMin()) : source.getMin();
+            flow = applySoftBoundary(flow, y[f.fromIdx], sourceMin, false); 
+
             Compartment target = compartments.get(f.toIdx);
-            if (y[f.toIdx] >= target.getMax() - 1e-12) {
-                flow = 0.0;
-            }
+            flow = applySoftBoundary(flow, y[f.toIdx], target.getMax(), true);
 
             yDot[f.fromIdx] -= flow;
             yDot[f.toIdx]   += flow;
@@ -138,12 +139,12 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
             }
 
             Compartment c = compartments.get(ss.idx);
-            if (net < 0 && clampAtZero && y[ss.idx] <= 1e-12) {
-                net = 0.0;
-            } else if (net < 0 && y[ss.idx] <= c.getMin() + 1e-12) {
-                net = 0.0;
-            } else if (net > 0 && y[ss.idx] >= c.getMax() - 1e-12) {
-                net = 0.0;
+            double cMin = clampAtZero ? Math.max(0.0, c.getMin()) : c.getMin();
+            
+            if (net > 0) {
+                net = applySoftBoundary(net, y[ss.idx], c.getMax(), true);
+            } else if (net < 0) {
+                net = -applySoftBoundary(-net, y[ss.idx], cMin, false);
             }
 
             yDot[ss.idx] += net;
@@ -156,6 +157,34 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
                 yDot[i] = 0.0;
             }
         }
+    }
+
+    /**
+     * Smoothly dampens a flow as it approaches a boundary to prevent
+     * numerical stiffness in adaptive solvers.
+     * 
+     * @param flow     incoming/outgoing rate (assumed absolute/positive for the logic)
+     * @param current  current state value
+     * @param boundary the boundary value to protect
+     * @param isMax    true if boundary is a maximum (inflow damping), false if minimum (outflow damping)
+     * @return         the dampened flow rate
+     */
+    private double applySoftBoundary(double flow, double current, double boundary, boolean isMax) {
+        if (isMax && boundary == Double.POSITIVE_INFINITY) return flow;
+        if (!isMax && boundary == Double.NEGATIVE_INFINITY) return flow;
+
+        double distance = isMax ? (boundary - current) : (current - boundary);
+        
+        // If already breached or within negligible distance, stop flow entirely (Upgrade 2)
+        if (distance < 1e-6) return 0.0;
+        
+        // If far from boundary, return full flow (efficiency)
+        if (distance > 1.0) return flow;
+        
+        // Hyperbolic/Logistic-style damping: smooth transition from 1.0 to 0.0
+        // Factor = distance / (distance + epsilon)
+        double damping = distance / (distance + 0.05);
+        return flow * damping;
     }
 
     public List<AdvectionChain> getAdvectionChains() {
