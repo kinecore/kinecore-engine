@@ -258,11 +258,17 @@ public class MonteCarloEnsemble {
                     long currTick = (long) Math.floor(tEnd / chain.shiftFrequency + 1e-9);
                     if (currTick > prevTick) {
                         int[] idx = chain.indices;
-                        if (chain.accumulateTerminal) {
-                            y[idx[idx.length - 1]] += y[idx[idx.length - 2]];
-                        }
+                        // Save the terminal cohort BEFORE the shift so it is not
+                        // overwritten by the loop (the "Vanishing Elders" bug fix).
+                        double terminalSurvivors = chain.accumulateTerminal
+                                ? y[idx[idx.length - 1]] : 0.0;
+                        // Shift every cohort up one slot
                         for (int i = idx.length - 1; i > 0; i--) {
                             y[idx[i]] = y[idx[i - 1]];
+                        }
+                        // Re-add the pre-shift elders on top of the incoming cohort
+                        if (chain.accumulateTerminal) {
+                            y[idx[idx.length - 1]] += terminalSurvivors;
                         }
                         y[idx[0]] = 0.0;
                     }
