@@ -9,56 +9,74 @@ import java.util.Map;
 /**
  * A Source/Sink that calculates flow based on a weighted sum of multiple compartments.
  * 
- * <p>Supports parameterized scaling via {@code scaleParamKey}, allowing birth rates
- * or migration scalars to be sampled in Monte Carlo iterations.</p>
+ * <p>Uses {@code sourceNames} for robustness against index shifting in the model JSON.</p>
  */
 public class AggregatedSource implements SourceSink {
 
-    private final int[] sourceIndices;
+    private final String[] sourceNames;
     private final double[] weights;
     private final double scale;
     private final String scaleParamKey;
+    
+    /** Resolved indices, used during simulation for performance */
+    private transient int[] resolvedIndices;
 
     /**
      * Constructs an AggregatedSource with a fixed scale.
      */
-    public AggregatedSource(int[] sourceIndices, double[] weights, double scale) {
-        this(sourceIndices, weights, scale, null);
+    public AggregatedSource(String[] sourceNames, double[] weights, double scale) {
+        this(sourceNames, weights, scale, null);
     }
 
     /**
      * Constructs an AggregatedSource with an optional parameter key for the scale.
      */
     @JsonCreator
-    public AggregatedSource(@JsonProperty("sourceIndices") int[] sourceIndices,
+    public AggregatedSource(@JsonProperty("sourceNames")   String[] sourceNames,
                             @JsonProperty("weights")       double[] weights,
                             @JsonProperty("scale")         double scale,
                             @JsonProperty("scaleParamKey")  String scaleParamKey) {
-        if (sourceIndices.length != weights.length) {
-            throw new IllegalArgumentException("Indices and weights must have identical length");
+        if (sourceNames.length != weights.length) {
+            throw new IllegalArgumentException("Names and weights must have identical length");
         }
-        this.sourceIndices = sourceIndices;
+        this.sourceNames = sourceNames;
         this.weights = weights;
         this.scale = scale;
         this.scaleParamKey = scaleParamKey;
     }
 
+    /**
+     * Internal method to resolve compartment names to indices.
+     * @param nameToIndex map from name to state index
+     */
+    public void resolve(Map<String, Integer> nameToIndex) {
+        this.resolvedIndices = new int[sourceNames.length];
+        for (int i = 0; i < sourceNames.length; i++) {
+            Integer idx = nameToIndex.get(sourceNames[i]);
+            if (idx == null) throw new IllegalArgumentException("Unknown sourceName: " + sourceNames[i]);
+            this.resolvedIndices[i] = idx;
+        }
+    }
+
     @Override
     public double getNetFlow(double t, double[] state, Map<String, Double> params) {
         double sum = 0;
-        for (int i = 0; i < sourceIndices.length; i++) {
-            sum += state[sourceIndices[i]] * weights[i];
+        int[] idxs = (resolvedIndices != null) ? resolvedIndices : new int[0];
+        
+        for (int i = 0; i < idxs.length; i++) {
+            sum += state[idxs[i]] * weights[i];
         }
         
-        double currentScale = (scaleParamKey != null && !scaleParamKey.isEmpty()) 
-                ? params.getOrDefault(scaleParamKey, scale) 
-                : scale;
+        double variation = (scaleParamKey != null && !scaleParamKey.isEmpty()) 
+                ? params.getOrDefault(scaleParamKey, 1.0) 
+                : 1.0;
                 
-        return sum * currentScale;
+        // Guard against negative stochastic draws (The Final Seal)
+        return sum * scale * Math.max(0.0, variation);
     }
 
-    @JsonProperty("sourceIndices")
-    public int[] getSourceIndices() { return sourceIndices; }
+    @JsonProperty("sourceNames")
+    public String[] getSourceNames() { return sourceNames; }
 
     @JsonProperty("weights")
     public double[] getWeights() { return weights; }

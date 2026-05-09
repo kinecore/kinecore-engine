@@ -74,8 +74,14 @@ public class CompartmentalNetworkBuilder {
     }
 
     public AdvectionChainConfigurator addAdvectionChain(String prefix, int start, int end) {
-        int[] indices = IntStream.rangeClosed(start, end).map(i -> requireCompartmentIndex(prefix + "_" + i)).toArray();
-        CompartmentalNetwork.AdvectionChain chain = new CompartmentalNetwork.AdvectionChain(indices, false, 1.0);
+        String[] names = IntStream.rangeClosed(start, end).mapToObj(i -> prefix + "_" + i).toArray(String[]::new);
+        CompartmentalNetwork.AdvectionChain chain = new CompartmentalNetwork.AdvectionChain(names, false, 1.0);
+        advectionChains.add(chain);
+        return new AdvectionChainConfigurator(chain);
+    }
+
+    public AdvectionChainConfigurator addAdvectionChain(String... names) {
+        CompartmentalNetwork.AdvectionChain chain = new CompartmentalNetwork.AdvectionChain(names, false, 1.0);
         advectionChains.add(chain);
         return new AdvectionChainConfigurator(chain);
     }
@@ -242,12 +248,24 @@ public class CompartmentalNetworkBuilder {
         
         List<Model.IndexedFluxDef> fluxDefs = new ArrayList<>();
         for (CompartmentalNetwork.IndexedFlux f : fluxes) {
-            fluxDefs.add(new Model.IndexedFluxDef(f.fromIdx, f.toIdx, f.flux, f.localFeedbacks));
+            String fromName = compartments.get(f.fromIdx).getName();
+            String toName = compartments.get(f.toIdx).getName();
+            fluxDefs.add(new Model.IndexedFluxDef(fromName, toName, f.flux, f.localFeedbacks));
         }
 
         List<Model.IndexedSourceSinkDef> sourceDefs = new ArrayList<>();
         for (CompartmentalNetwork.IndexedSourceSink s : sources) {
-            sourceDefs.add(new Model.IndexedSourceSinkDef(s.idx, s.sourceSink, s.localFeedbacks));
+            String targetName = compartments.get(s.idx).getName();
+            sourceDefs.add(new Model.IndexedSourceSinkDef(targetName, s.sourceSink, s.localFeedbacks));
+        }
+
+        List<Model.AggregateDef> aggregateDefs = new ArrayList<>();
+        for (Map.Entry<String, int[]> entry : aggregates.entrySet()) {
+            String[] names = new String[entry.getValue().length];
+            for (int i = 0; i < names.length; i++) {
+                names[i] = compartments.get(entry.getValue()[i]).getName();
+            }
+            aggregateDefs.add(new Model.AggregateDef(entry.getKey(), names));
         }
 
         return new Model(
@@ -257,6 +275,7 @@ public class CompartmentalNetworkBuilder {
                 new ArrayList<>(globalFeedbacks),
                 new ArrayList<>(advectionChains),
                 new HashMap<>(exogenousSignals),
+                aggregateDefs,
                 this.clampAtZero
         );
     }

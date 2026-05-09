@@ -273,17 +273,18 @@ public class MonteCarloEnsemble {
                 for (CompartmentalNetwork.AdvectionChain chain : network.getAdvectionChains()) {
                     long prevTick = (long) Math.floor(tStart / chain.shiftFrequency + 1e-9);
                     long currTick = (long) Math.floor(tEnd / chain.shiftFrequency + 1e-9);
-                    if (currTick > prevTick) {
-                        int[] idx = chain.indices;
-                        // Save the terminal cohort BEFORE the shift so it is not
-                        // overwritten by the loop (the "Vanishing Elders" bug fix).
+                    long ticksToProcess = currTick - prevTick;
+
+                    for (int tick = 0; tick < ticksToProcess; tick++) {
+                        int[] idx = chain.getIndices();
+                        // Save the terminal cohort BEFORE the shift
                         double terminalSurvivors = chain.accumulateTerminal
                                 ? y[idx[idx.length - 1]] : 0.0;
                         // Shift every cohort up one slot
                         for (int i = idx.length - 1; i > 0; i--) {
                             y[idx[i]] = y[idx[i - 1]];
                         }
-                        // Re-add the pre-shift elders on top of the incoming cohort
+                        // Re-add the pre-shift elders
                         if (chain.accumulateTerminal) {
                             y[idx[idx.length - 1]] += terminalSurvivors;
                         }

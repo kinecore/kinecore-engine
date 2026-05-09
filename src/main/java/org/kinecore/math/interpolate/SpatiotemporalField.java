@@ -7,7 +7,8 @@ import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 /**
  * A 2D spatiotemporal field for interpolating rates (e.g. fertility by age and time).
  * 
- * <p>Uses Bicubic Spline interpolation with fallback to bilinear for small grids.</p>
+ * <p>Implements Constant Extrapolation (Upgrade 1) to protect the engine from 
+ * crashing if the simulation time or age exceeds the range of the input data.</p>
  */
 public class SpatiotemporalField {
     private final double[] x;
@@ -17,12 +18,6 @@ public class SpatiotemporalField {
     private final PolynomialSplineFunction[] linearRows;
     private final boolean useBicubic;
 
-    /**
-     * Constructs a field.
-     * @param x x-axis grid
-     * @param y y-axis grid
-     * @param values 2D values [x][y]
-     */
     public SpatiotemporalField(double[] x, double[] y, double[][] values) {
         this.x = x.clone();
         this.y = y.clone();
@@ -44,34 +39,40 @@ public class SpatiotemporalField {
     }
 
     /**
-     * Interpolates the value at (xVal, yVal).
-     * @param xVal coordinate 1
-     * @param yVal coordinate 2
-     * @return interpolated value
+     * Interpolates the value at (xVal, yVal) with constant extrapolation.
+     * @param xVal coordinate 1 (typically time)
+     * @param yVal coordinate 2 (typically age)
+     * @return interpolated (or extrapolated) value
      */
     public double value(double xVal, double yVal) {
+        // Step 1: Constant Extrapolation (The Shield)
+        double safeX = clamp(xVal, x[0], x[x.length - 1]);
+        double safeY = clamp(yVal, y[0], y[y.length - 1]);
+
         if (useBicubic) {
-            return bicubic.value(xVal, yVal);
+            return bicubic.value(safeX, safeY);
         }
-        // Find the two surrounding x indices
-        int ix = searchIndex(x, xVal);
-        int iy = searchIndex(y, yVal);
-        double x0 = x[ix], x1 = x[ix + 1];
-        double y0 = y[iy], y1 = y[iy + 1];
-        double wx = (xVal - x0) / (x1 - x0);
-        double wy = (yVal - y0) / (y1 - y0);
         
-        double v00 = linearRows[ix].value(yVal);
-        double v10 = linearRows[ix + 1].value(yVal);
-        // Bilinear interpolation in x
-        return v00 * (1 - wx) + v10 * wx;
+        int ix = searchIndex(x, safeX);
+        double wx = (x.length > 1) ? (safeX - x[ix]) / (x[ix + 1] - x[ix]) : 0;
+        
+        double v0 = linearRows[ix].value(safeY);
+        if (ix + 1 < x.length) {
+            double v1 = linearRows[ix + 1].value(safeY);
+            return v0 * (1 - wx) + v1 * wx;
+        }
+        return v0;
+    }
+
+    private double clamp(double val, double min, double max) {
+        return Math.max(min, Math.min(max, val));
     }
 
     private int searchIndex(double[] arr, double val) {
         int idx = java.util.Arrays.binarySearch(arr, val);
         if (idx < 0) idx = -idx - 2;
         if (idx < 0) idx = 0;
-        if (idx >= arr.length - 1) idx = arr.length - 2;
+        if (idx >= arr.length - 1) idx = (arr.length > 1) ? arr.length - 2 : 0;
         return idx;
     }
 }

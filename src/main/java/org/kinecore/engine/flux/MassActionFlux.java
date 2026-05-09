@@ -7,57 +7,57 @@ import org.kinecore.engine.Flux;
 import java.util.Map;
 
 /**
- * A flux driven by mass-action kinetics: flow = rate × fromValue × state[interactorIndex].
+ * A flux driven by mass-action kinetics: flow = rate × fromValue × state[interactorIdx].
  *
- * <p>Useful for modelling contagion, predator–prey, or bimolecular reactions where
- * the transfer rate is proportional to both the source and an interacting compartment.</p>
- *
- * <p>JSON example:
- * <pre>{ "type": "massAction", "rate": 0.3, "interactorIndex": 2 }</pre>
- * </p>
+ * <p>Uses {@code interactorName} for robustness against index shifting in the model JSON.</p>
  */
 public class MassActionFlux implements Flux {
 
-    /** Reaction rate constant. */
     private final double rate;
-
-    /**
-     * Index of the interactor compartment in the state vector.
-     * Set to -1 to use only the source value (degrades to first-order kinetics).
-     */
-    private final int interactorIndex;
+    private final String interactorName;
+    
+    /** Resolved index, used during simulation for performance */
+    private transient int resolvedInteractorIndex = -1;
 
     /** No-arg constructor for Jackson. */
-    public MassActionFlux() { this.rate = 0.0; this.interactorIndex = -1; }
+    public MassActionFlux() { this.rate = 0.0; this.interactorName = null; }
 
     /**
      * Constructs a MassActionFlux.
      * @param rate            rate constant
-     * @param interactorIndex state-vector index of the interacting compartment
+     * @param interactorName  name of the interacting compartment
      */
     @JsonCreator
     public MassActionFlux(@JsonProperty("rate") double rate,
-                          @JsonProperty("interactorIndex") int interactorIndex) {
-        this.rate             = rate;
-        this.interactorIndex  = interactorIndex;
+                          @JsonProperty("interactorName") String interactorName) {
+        this.rate           = rate;
+        this.interactorName = interactorName;
     }
 
     /**
-     * Gets the reaction rate constant.
-     * @return rate constant
+     * Internal method to resolve the interactor name to an index.
+     * @param nameToIndex map from name to state index
      */
-    public double getRate()           { return rate; }
-
-    /**
-     * Gets the index of the interacting compartment in the state vector.
-     * @return interactor compartment index, or -1 for first-order kinetics
-     */
-    public int getInteractorIndex()   { return interactorIndex; }
+    public void resolve(Map<String, Integer> nameToIndex) {
+        if (interactorName != null && !interactorName.isEmpty()) {
+            Integer idx = nameToIndex.get(interactorName);
+            if (idx == null) throw new IllegalArgumentException("Unknown interactorName: " + interactorName);
+            this.resolvedInteractorIndex = idx;
+        } else {
+            this.resolvedInteractorIndex = -1;
+        }
+    }
 
     @Override
     public double getFlowRate(double t, double fromValue, double[] state, Map<String, Double> params) {
-        double interactor = (interactorIndex >= 0 && interactorIndex < state.length)
-                ? state[interactorIndex] : 1.0;
+        double interactor = (resolvedInteractorIndex >= 0 && resolvedInteractorIndex < state.length)
+                ? state[resolvedInteractorIndex] : 1.0;
         return rate * fromValue * interactor;
     }
+
+    @JsonProperty("rate")
+    public double getRate() { return rate; }
+
+    @JsonProperty("interactorName")
+    public String getInteractorName() { return interactorName; }
 }

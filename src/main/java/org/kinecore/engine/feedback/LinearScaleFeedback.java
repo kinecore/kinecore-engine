@@ -30,10 +30,11 @@ public class LinearScaleFeedback implements FeedbackOperator {
 
     @Override
     public double apply(double t, double currentFlow, double[] state, Map<String, Double> params) {
-        double currentScalar = (scalarParamKey != null && !scalarParamKey.isEmpty())
-                ? params.getOrDefault(scalarParamKey, scalar)
-                : scalar;
-        return currentFlow * currentScalar;
+        double variation = (scalarParamKey != null && !scalarParamKey.isEmpty())
+                ? params.getOrDefault(scalarParamKey, 1.0)
+                : 1.0;
+        // Guard against negative stochastic draws
+        return currentFlow * scalar * Math.max(0.0, variation);
     }
 
     @JsonProperty("scalar")

@@ -5,12 +5,13 @@ import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * A bound compartmental ODE system.
  * 
- * <p>This class implements {@link FirstOrderDifferentialEquations} and is responsible for
- * calculating the rates of change (derivatives) for all compartments in the system.</p>
+ * <p>Implements the ODE derivative function. Optimized for performance by using a 
+ * pre-allocated workspace array for aggregates to avoid the "Allocation Storm".</p>
  */
 public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
 
@@ -20,21 +21,72 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
     private final List<FeedbackOperator> globalFeedbacks;
     private final List<AdvectionChain> advectionChains;
     private final Map<String, ExogenousSignal> exogenousSignals;
+    private final List<Aggregate> aggregates;
     private final Map<String, Double> params;
     private final boolean clampAtZero;
+    
+    /** Pre-allocated workspace to avoid GC pressure in the ODE loop */
+    private final double[] workspaceState;
 
+    public static class Aggregate {
+        public final String name;
+        public final int[] sourceIndices;
+
+        public Aggregate(String name, int[] sourceIndices) {
+            this.name = name;
+            this.sourceIndices = sourceIndices;
+        }
+
+        public double calculate(double[] y) {
+            double sum = 0;
+            for (int idx : sourceIndices) {
+                sum += y[idx];
+            }
+            return sum;
+        }
+    }
+
+    /**
+     * Represents a discrete "aging" chain where mass shifts between cohorts at 
+     * a specific frequency. Uses name-based definition for robustness (Upgrade 3).
+     */
     public static class AdvectionChain {
-        public final int[] indices;
+        private final String[] sourceNames;
         public boolean accumulateTerminal;
         public double shiftFrequency;
+        
+        /** Resolved indices, used during simulation for performance */
+        private transient int[] resolvedIndices;
 
         @com.fasterxml.jackson.annotation.JsonCreator
-        public AdvectionChain(@com.fasterxml.jackson.annotation.JsonProperty("indices") int[] indices, 
+        public AdvectionChain(@com.fasterxml.jackson.annotation.JsonProperty("sourceNames") String[] names, 
                               @com.fasterxml.jackson.annotation.JsonProperty("accumulateTerminal") boolean acc, 
                               @com.fasterxml.jackson.annotation.JsonProperty("shiftFrequency") double freq) {
-            this.indices = indices;
+            this.sourceNames = names;
             this.accumulateTerminal = acc;
             this.shiftFrequency = freq;
+        }
+        
+        /**
+         * Resolves compartment names to indices.
+         * @param nameToIndex map from name to state index
+         */
+        public void resolve(Map<String, Integer> nameToIndex) {
+            this.resolvedIndices = new int[sourceNames.length];
+            for (int i = 0; i < sourceNames.length; i++) {
+                Integer idx = nameToIndex.get(sourceNames[i]);
+                if (idx == null) throw new IllegalArgumentException("Unknown sourceName in AdvectionChain: " + sourceNames[i]);
+                this.resolvedIndices[i] = idx;
+            }
+        }
+
+        public int[] getIndices() {
+            return resolvedIndices;
+        }
+        
+        @com.fasterxml.jackson.annotation.JsonProperty("sourceNames")
+        public String[] getSourceNames() {
+            return sourceNames;
         }
     }
 
@@ -70,6 +122,7 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
                          List<FeedbackOperator> globalFeedbacks,
                          List<AdvectionChain>   advectionChains,
                          Map<String, ExogenousSignal> exogenousSignals,
+                         List<Aggregate>        aggregates,
                          Map<String, Double>    params,
                          boolean                clampAtZero) {
         this.compartments = Collections.unmodifiableList(compartments);
@@ -78,19 +131,16 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
         this.globalFeedbacks = globalFeedbacks != null ? Collections.unmodifiableList(globalFeedbacks) : Collections.emptyList();
         this.advectionChains = advectionChains != null ? Collections.unmodifiableList(advectionChains) : Collections.emptyList();
         this.exogenousSignals = exogenousSignals != null ? Collections.unmodifiableMap(exogenousSignals) : Collections.emptyMap();
+        this.aggregates   = aggregates != null ? Collections.unmodifiableList(aggregates) : Collections.emptyList();
         this.params       = params != null ? Collections.unmodifiableMap(params) : Collections.emptyMap();
         this.clampAtZero  = clampAtZero;
+        
+        // Pre-allocate workspace
+        this.workspaceState = new double[compartments.size() + this.aggregates.size()];
     }
 
-    /**
-     * Creates a new instance of this network bound to the given parameters.
-     * Crucial for thread-safe Monte Carlo simulations without ThreadLocal.
-     * 
-     * @param newParams the parameter map for this instance
-     * @return a new bound network
-     */
     public CompartmentalNetwork withParams(Map<String, Double> newParams) {
-        return new CompartmentalNetwork(compartments, fluxes, sources, globalFeedbacks, advectionChains, exogenousSignals, newParams, clampAtZero);
+        return new CompartmentalNetwork(compartments, fluxes, sources, globalFeedbacks, advectionChains, exogenousSignals, aggregates, newParams, clampAtZero);
     }
 
     @Override
@@ -100,23 +150,25 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
 
     @Override
     public void computeDerivatives(double t, double[] y, double[] yDot) {
-        // 1. Reset derivatives
+        System.arraycopy(y, 0, workspaceState, 0, y.length);
+        for (int i = 0; i < aggregates.size(); i++) {
+            workspaceState[y.length + i] = aggregates.get(i).calculate(y);
+        }
+
         for (int i = 0; i < yDot.length; i++) {
             yDot[i] = 0.0;
         }
 
-        // 2. Apply fluxes
         for (IndexedFlux f : fluxes) {
-            double flow = f.flux.getFlowRate(t, y[f.fromIdx], y, params);
+            double flow = f.flux.getFlowRate(t, y[f.fromIdx], workspaceState, params);
             for (FeedbackOperator fb : f.localFeedbacks) {
-                flow = fb.apply(t, flow, y, params);
+                flow = fb.apply(t, flow, workspaceState, params);
             }
             for (FeedbackOperator fb : globalFeedbacks) {
-                flow = fb.apply(t, flow, y, params);
+                flow = fb.apply(t, flow, workspaceState, params);
             }
             if (flow < 0.0) flow = 0.0;
 
-            // Soft Boundary Handling (Upgrade 3)
             Compartment source = compartments.get(f.fromIdx);
             double sourceMin = clampAtZero ? Math.max(0.0, source.getMin()) : source.getMin();
             flow = applySoftBoundary(flow, y[f.fromIdx], sourceMin, false); 
@@ -128,14 +180,13 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
             yDot[f.toIdx]   += flow;
         }
 
-        // 3. Apply sources/sinks
         for (IndexedSourceSink ss : sources) {
-            double net = ss.sourceSink.getNetFlow(t, y, params);
+            double net = ss.sourceSink.getNetFlow(t, workspaceState, params);
             for (FeedbackOperator fb : ss.localFeedbacks) {
-                net = fb.apply(t, net, y, params);
+                net = fb.apply(t, net, workspaceState, params);
             }
             for (FeedbackOperator fb : globalFeedbacks) {
-                net = fb.apply(t, net, y, params);
+                net = fb.apply(t, net, workspaceState, params);
             }
 
             Compartment c = compartments.get(ss.idx);
@@ -150,7 +201,6 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
             yDot[ss.idx] += net;
         }
 
-        // 4. Constraint Handling: Physical non-negativity and bounds
         for (int i = 0; i < yDot.length; i++) {
             Compartment c = compartments.get(i);
             if (c.isDerivativeLocked()) {
@@ -159,32 +209,24 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
         }
     }
 
-    /**
-     * Smoothly dampens a flow as it approaches a boundary to prevent
-     * numerical stiffness in adaptive solvers.
-     * 
-     * @param flow     incoming/outgoing rate (assumed absolute/positive for the logic)
-     * @param current  current state value
-     * @param boundary the boundary value to protect
-     * @param isMax    true if boundary is a maximum (inflow damping), false if minimum (outflow damping)
-     * @return         the dampened flow rate
-     */
     private double applySoftBoundary(double flow, double current, double boundary, boolean isMax) {
         if (isMax && boundary == Double.POSITIVE_INFINITY) return flow;
         if (!isMax && boundary == Double.NEGATIVE_INFINITY) return flow;
 
         double distance = isMax ? (boundary - current) : (current - boundary);
-        
-        // If already breached or within negligible distance, stop flow entirely (Upgrade 2)
-        if (distance < 1e-6) return 0.0;
-        
-        // If far from boundary, return full flow (efficiency)
+        if (distance < org.kinecore.util.MathUtils.NEAR_ZERO) return 0.0;
         if (distance > 1.0) return flow;
         
-        // Hyperbolic/Logistic-style damping: smooth transition from 1.0 to 0.0
-        // Factor = distance / (distance + epsilon)
-        double damping = distance / (distance + 0.05);
+        double damping = distance / (distance + org.kinecore.util.MathUtils.DAMPING_EPSILON);
         return flow * damping;
+    }
+
+    public double[] buildInitialState() {
+        double[] y = new double[compartments.size()];
+        for (int i = 0; i < compartments.size(); i++) {
+            y[i] = compartments.get(i).getInitialValue(params);
+        }
+        return y;
     }
 
     public List<AdvectionChain> getAdvectionChains() {
@@ -195,21 +237,7 @@ public class CompartmentalNetwork implements FirstOrderDifferentialEquations {
         return exogenousSignals;
     }
 
-    /** 
-     * Gets the list of compartments.
-     * @return the list of compartments in this network 
-     */
     public List<Compartment> getCompartments() {
         return compartments;
-    }
-
-    /** 
-     * Builds the initial state vector from the compartments.
-     * @return a double array of initial values
-     */
-    public double[] buildInitialState() {
-        return compartments.stream()
-                           .mapToDouble(c -> c.getInitialValue(params))
-                           .toArray();
     }
 }
