@@ -10,8 +10,7 @@ import org.kinecore.solver.impl.DormandPrince853Solver;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -30,6 +29,14 @@ public class MonteCarloEnsemble {
     private final int iterations;
     private final Map<String, Function<double[], Double>> outputAggregators;
     private final Consumer<double[]> discreteShiftHandler;
+
+    /**
+     * Executor used for parallel Monte Carlo runs.
+     * Defaults to {@link ForkJoinPool#commonPool()} for backwards compatibility,
+     * but Spring Boot should inject a dedicated {@code ThreadPoolTaskExecutor} via
+     * {@link Builder#executorService(ExecutorService)} to avoid web-server thread starvation.
+     */
+    private final Executor executorService;
 
     /**
      * Immutable result of an ensemble run.
@@ -135,68 +142,84 @@ public class MonteCarloEnsemble {
     }
 
     private MonteCarloEnsemble(Builder b) {
-        this.modelDefinition   = b.modelDefinition;
-        this.parameterSampler  = b.sampler;
-        this.solver            = b.solver;
-        this.startTime         = b.startTime;
-        this.endTime           = b.endTime;
-        this.stepSize          = b.stepSize;
-        this.iterations        = b.iterations;
-        this.outputAggregators = Collections.unmodifiableMap(new HashMap<>(b.outputAggregators));
+        this.modelDefinition      = b.modelDefinition;
+        this.parameterSampler     = b.sampler;
+        this.solver               = b.solver;
+        this.startTime            = b.startTime;
+        this.endTime              = b.endTime;
+        this.stepSize             = b.stepSize;
+        this.iterations           = b.iterations;
+        this.outputAggregators    = Collections.unmodifiableMap(new HashMap<>(b.outputAggregators));
         this.discreteShiftHandler = b.discreteShiftHandler;
+        this.executorService      = b.executorService != null ? b.executorService : ForkJoinPool.commonPool();
     }
 
     /**
      * Runs the ensemble simulation.
      * @return simulation result
      */
+    @SuppressWarnings("unchecked")
     public SimulationResult run() {
         Map<String, ConcurrentSkipListMap<Double, TDigest>> digests = new ConcurrentHashMap<>();
         for (String outName : outputAggregators.keySet()) {
             digests.put(outName, new ConcurrentSkipListMap<>());
         }
 
-        // Parallel lists to store raw iteration data for sensitivity analysis (Task 2)
-        Map<String, Double>[] sampledParams = new Map[iterations];
+        // Per-iteration storage for sensitivity analysis
+        Map<String, Double>[] sampledParams  = new Map[iterations];
         Map<String, Double>[] finalSummaries = new Map[iterations];
 
-        IntStream.range(0, iterations).parallel().forEach(iter -> {
-            Map<String, Double> sampled = parameterSampler.sample(iter + 99991L);
-            sampledParams[iter] = sampled;
-            
-            CompartmentalNetwork network = modelDefinition.bind(sampled);
-            Map<String, double[]> traj = solveSingle(network);
-            
-            // Record final state summary
-            Map<String, Double> summary = new HashMap<>();
-            for (var entry : traj.entrySet()) {
-                double[] values = entry.getValue();
-                summary.put(entry.getKey(), values[values.length - 1]);
-            }
-            finalSummaries[iter] = summary;
+        // Build one CompletableFuture per iteration so simulation threads are
+        // isolated from the web-server thread pool (Flaw 3 fix).
+        List<CompletableFuture<Void>> futures = new ArrayList<>(iterations);
+        for (int i = 0; i < iterations; i++) {
+            final int iter = i;
+            futures.add(CompletableFuture.runAsync(() -> {
+                Map<String, Double> sampled = parameterSampler.sample(iter + 99991L);
+                sampledParams[iter] = sampled;
 
-            int nSteps = traj.values().iterator().next().length;
-            for (int step = 0; step < nSteps; step++) {
-                double t = startTime + step * stepSize;
-                for (Map.Entry<String, double[]> e : traj.entrySet()) {
-                    TDigest d = digests.get(e.getKey()).computeIfAbsent(t, k -> TDigest.createDigest(100.0));
-                    synchronized (d) { d.add(e.getValue()[step]); }
+                CompartmentalNetwork network = modelDefinition.bind(sampled);
+                Map<String, double[]> traj   = solveSingle(network);
+
+                // Record final state summary for sensitivity analysis
+                Map<String, Double> summary = new HashMap<>();
+                for (var entry : traj.entrySet()) {
+                    double[] values = entry.getValue();
+                    summary.put(entry.getKey(), values[values.length - 1]);
                 }
-            }
-        });
+                finalSummaries[iter] = summary;
+
+                int nSteps = traj.values().iterator().next().length;
+                for (int step = 0; step < nSteps; step++) {
+                    double t = startTime + step * stepSize;
+                    for (Map.Entry<String, double[]> e : traj.entrySet()) {
+                        TDigest d = digests.get(e.getKey())
+                                          .computeIfAbsent(t, k -> TDigest.createDigest(100.0));
+                        synchronized (d) { d.add(e.getValue()[step]); }
+                    }
+                }
+            }, executorService));
+        }
+
+        // Block until every iteration has finished
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         Map<String, List<SimulationResult.Point>> finalOutputs = new HashMap<>();
         for (var entry : digests.entrySet()) {
             List<SimulationResult.Point> points = new ArrayList<>();
             for (var te : entry.getValue().entrySet()) {
                 TDigest d = te.getValue();
-                points.add(new SimulationResult.Point(te.getKey(), d.quantile(0.05), d.quantile(0.50), d.quantile(0.95)));
+                points.add(new SimulationResult.Point(
+                        te.getKey(), d.quantile(0.05), d.quantile(0.50), d.quantile(0.95)));
             }
             points.sort(Comparator.comparingDouble(p -> p.time));
             finalOutputs.put(entry.getKey(), points);
         }
-        
-        return new SimulationResult(finalOutputs, Arrays.asList(sampledParams), Arrays.asList(finalSummaries));
+
+        return new SimulationResult(
+                finalOutputs,
+                Arrays.asList(sampledParams),
+                Arrays.asList(finalSummaries));
     }
 
     private Map<String, double[]> solveSingle(CompartmentalNetwork network) {
@@ -298,6 +321,14 @@ public class MonteCarloEnsemble {
         private final Map<String, Function<double[], Double>> outputAggregators = new HashMap<>();
         private Consumer<double[]> discreteShiftHandler = null;
 
+        /**
+         * Dedicated executor for simulation threads.
+         * Defaults to {@code null} (resolved to {@link ForkJoinPool#commonPool()} at build time).
+         * Spring Boot should inject a {@code ThreadPoolTaskExecutor} bean here to keep
+         * simulation threads isolated from Tomcat request-handling threads.
+         */
+        private Executor executorService = null;
+
         /** Constructor for the builder. */
         public Builder() {}
 
@@ -361,6 +392,35 @@ public class MonteCarloEnsemble {
          */
         public Builder discreteShift(Consumer<double[]> handler) {
             this.discreteShiftHandler = handler; return this;
+        }
+
+        /**
+         * Sets a dedicated {@link Executor} for simulation threads.
+         *
+         * <p>In a Spring Boot context, inject your {@code @Bean("simulationExecutor")}
+         * {@code ThreadPoolTaskExecutor} here to prevent Monte Carlo runs from
+         * saturating the JVM's {@link ForkJoinPool#commonPool()} and starving
+         * Tomcat HTTP request threads.</p>
+         *
+         * <p>Example Spring Boot bean:</p>
+         * <pre>{@code
+         * @Bean("simulationExecutor")
+         * public ThreadPoolTaskExecutor simulationExecutor() {
+         *     ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
+         *     exec.setCorePoolSize(4);
+         *     exec.setMaxPoolSize(Runtime.getRuntime().availableProcessors());
+         *     exec.setQueueCapacity(256);
+         *     exec.setThreadNamePrefix("kinecore-sim-");
+         *     exec.initialize();
+         *     return exec;
+         * }
+         * }</pre>
+         *
+         * @param executor dedicated executor service
+         * @return this builder
+         */
+        public Builder executorService(Executor executor) {
+            this.executorService = executor; return this;
         }
 
         /** 
